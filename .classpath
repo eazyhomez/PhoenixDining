@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry excluding="com/eteks/test/OneRayOneFurnPhoenix.java|com/eteks/test/Prep_PhoenixPathway.java|com/eteks/test/Prep2_PhoenixPathway.java|com/eteks/test/PhoenixPathway_Working_Dining2Points.java|com/eteks/test/PhoenixPathway_Working_Dining2Points_Tracer.java|com/eteks/test/PhoenixPathway_Working_Dining2Points_NoMarker.java|com/eteks/test/curr_PhoenixPathway.java|com/eteks/test/Foyer_PhoenixPathway.java|com/eteks/test/PhoenixPathway_Dining2Points_Tracer_CORRECTEDArc_Final.java|com/eteks/test/nw_PhoenixPathway.java|com/eteks/test/PhoenixPathway_Foyer.java|com/eteks/test/PhoenixPathway_Working_Dining2Points_Tracer_CORRECTEDArc.java" kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="lib/SweetHome3D-4.5.jar"/>
+	<classpathentry kind="lib" path="lib/j3dcore.jar"/>
+	<classpathentry kind="lib" path="lib/j3dutils.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
