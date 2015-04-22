@@ -307,9 +307,13 @@ public class PhoenixDining extends Plugin
 				*/
 				// ================================================ //
 				
-				for(Wall w : home.getWalls())
-				{
-					//moveFurnParallelToWall
+				List<LineSegement> wsList = getInnerWallSegements(home);
+				HomePieceOfFurniture hpf = home.getFurniture().get(0);
+				
+				for(LineSegement ws : wsList)
+				{					
+					placeFurnParallelToWall(ws, hpf.clone());					
+					placeFurnPerpendicularToWall(ws, hpf.clone());
 				}
 				
 				// ================================================ //
@@ -321,21 +325,68 @@ public class PhoenixDining extends Plugin
 			}
 		}
 		
-		public void moveFurnParallelToWall(LineSegement ws, HomePieceOfFurniture furn)
+		public void placeFurnParallelToWall(LineSegement ws, HomePieceOfFurniture furn)
 		{
 			FurnLoc furnLoc = new FurnLoc();
+			float furnAngle = 0.0f;
 			
-			float wsAngle = (float) Math.atan((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x)); 
+			float wsAngle =  (float) Math.atan((Math.abs(ws.endP.y - ws.startP.y)) / (Math.abs(ws.endP.x - ws.startP.x))); 
+			
+			Points p = new Points((ws.startP.x - ws.endP.x), (ws.startP.y - ws.endP.y));
+			int qIndx = getQuadrantInfo(p);
+			
+			//int qIndx = getQuadrantInfo(ws.endP);
+			
+			if(qIndx == 1)
+				furnAngle = wsAngle;
+			else if(qIndx == 2)
+				furnAngle = (float)(Math.PI) - wsAngle;
+			else if(qIndx == 3)
+				furnAngle = (float)(Math.PI) + wsAngle;
+			else if(qIndx == 4)
+				furnAngle = (float)(2.0f*Math.PI) - wsAngle;
 			
 			furnLoc.w = furn.getWidth();
-			furnLoc.ang = wsAngle;
+			furnLoc.ang = furnAngle;
 			
 			furnLoc.p = calcFurnMids(ws.startP, ws.endP, (0.5f*furn.getDepth() + FURNITURE_PLACE_TOLERANCE));	
 			
-			placeFurnItem(furn, furnLoc);							
-			chkFurnOrient(furn, ws);		
+			placeFurnItem(furn, furnLoc);
+			
+			//JOptionPane.showMessageDialog(null, (wsAngle * (float)(180.0f / Math.PI)) + " -> " + (furnAngle  * (float)(180.0f / Math.PI)) + " : " + qIndx);
 		}
 		
+		public void placeFurnPerpendicularToWall(LineSegement ws, HomePieceOfFurniture furn)
+		{
+			FurnLoc furnLoc = new FurnLoc();
+			float furnAngle = 0.0f;
+			
+			float wsAngle =  (float) Math.atan((Math.abs(ws.endP.y - ws.startP.y)) / (Math.abs(ws.endP.x - ws.startP.x))); 
+			
+			Points p = new Points((ws.startP.x - ws.endP.x), (ws.startP.y - ws.endP.y));
+			int qIndx = getQuadrantInfo(p);
+			
+			//int qIndx = getQuadrantInfo(ws.endP);
+			
+			if(qIndx == 1)
+				furnAngle = wsAngle;
+			else if(qIndx == 2)
+				furnAngle = (float)(Math.PI) - wsAngle;
+			else if(qIndx == 3)
+				furnAngle = (float)(Math.PI) + wsAngle;
+			else if(qIndx == 4)
+				furnAngle = (float)(2.0f*Math.PI) - wsAngle;
+			
+			furnAngle += (float)(Math.PI/2.0f);
+			
+			furnLoc.w = furn.getWidth();
+			furnLoc.ang = furnAngle;			
+			furnLoc.p = calcFurnMids(ws.startP, ws.endP, (0.5f*furn.getWidth() + FURNITURE_PLACE_TOLERANCE));	
+			
+			placeFurnItem(furn, furnLoc);
+			
+			//JOptionPane.showMessageDialog(null, (wsAngle * (float)(180.0f / Math.PI)) + " -> " + (furnAngle  * (float)(180.0f / Math.PI)) + " : " + qIndx);
+		}
 		
  		public LineSegement getLongestSideOfRoom(Room r)
 		{
@@ -617,6 +668,49 @@ public class PhoenixDining extends Plugin
 		}
 		
 		// ======================= UTILITY FUNCTIONS ======================= //
+		
+		public List<LineSegement> getInnerWallSegements(Home h)
+		{	
+			List<LineSegement> wsList = new ArrayList<LineSegement>();
+			
+			for(Wall w: h.getWalls())
+			{			
+				float[][] wRect = w.getPoints();				
+				List<Points> validPoints = new ArrayList<Points>();
+						
+				for(int ws = 0; ws < wRect.length; ws++)
+				{
+					Points p = new Points(wRect[ws][0], wRect[ws][1]);
+					
+					if(room.containsPoint(p.x, p.y, (ROOM_TOLERANCE * w.getThickness())))
+						validPoints.add(p);
+				}
+						
+				if(validPoints.size() == 2)
+				{
+					LineSegement ws = new LineSegement(validPoints.get(0), validPoints.get(1));
+					wsList.add(ws);
+				}
+			}
+			
+			return wsList;
+		}
+		
+		public int getQuadrantInfo(Points p)
+		{
+			int qIndx = 0;
+			
+			if((p.x > 0.0f) && (p.y > 0.0f))
+				qIndx = 1;
+			else if((p.x < 0.0f) && (p.y > 0.0f))
+				qIndx = 2;
+			else if((p.x < 0.0f) && (p.y < 0.0f))
+				qIndx = 3;
+			else if((p.x > 0.0f) && (p.y < 0.0f))
+				qIndx = 4;
+			
+			return qIndx;
+		}
 		
 		public void placeFurnItem(HomePieceOfFurniture inFurn, FurnLoc fLoc)
 		{
