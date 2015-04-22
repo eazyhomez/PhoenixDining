@@ -313,7 +313,7 @@ public class PhoenixDining extends Plugin
 				*/
 				
 				// 8,9 ================================================ //
-				
+				/*
 				Points centerP = new Points(0.0f, 0.0f);
 				
 				List<LineSegement> wsList = getInnerWallSegements(home);
@@ -325,14 +325,13 @@ public class PhoenixDining extends Plugin
 					placeFurnPerpendicularToWall(ws, hpf.clone(), centerP);
 					JOptionPane.showMessageDialog(null, "****");
 				}
-				
+				*/
 				// 10 ================================================ //
 				/*
 				Points centerP = new Points(0.0f, 0.0f);
 				float radius = 100.0f;
 				
-				float intercept = centerP.y; 
-				
+				float intercept = centerP.y; 				
 				List<LineSegement> wsList = getInnerWallSegements(home);
 				
 				int markerCol = 3;
@@ -362,6 +361,33 @@ public class PhoenixDining extends Plugin
 				
 				putMarkers(centerP, 0);
 				*/
+				// 11 ================================================ //
+				
+				HomePieceOfFurniture hpf = home.getFurniture().get(0);
+				
+				Points centerP = new Points(0.0f, 0.0f);
+				putMarkers(centerP, 0);
+				
+				float distance = 200.0f;				
+				List<LineSegement> wsList = getInnerWallSegements(home);
+				
+				LineSegement ws = wsList.get(0);
+				
+				List<Points> interPList = calcAllFourFurnCoordinates(ws, centerP, distance);
+			
+				if(interPList.size() > 3)
+				{
+					placeFurnParallelToWall(ws, hpf.clone(), interPList.get(0));
+					placeFurnParallelToWall(ws, hpf.clone(), interPList.get(1));
+					placeFurnPerpendicularToWall(ws, hpf.clone(), interPList.get(2));
+					placeFurnPerpendicularToWall(ws, hpf.clone(), interPList.get(3));
+				}
+				
+				Points midP = new Points(((ws.startP.x + ws.endP.x)/2), ((ws.startP.y + ws.endP.y)/2));
+				putMarkers(midP, 5);
+				
+				JOptionPane.showMessageDialog(null, "****");
+				
 				// ================================================ //
 				
 			}
@@ -371,7 +397,26 @@ public class PhoenixDining extends Plugin
 				//e.printStackTrace();
 			}
 		}
-				
+		
+		public List<Points> calcAllFourFurnCoordinates(LineSegement ws, Points centerP, float dist) 
+		{
+			List<Points> retPList = new ArrayList<Points>();
+			
+			float intercept = centerP.y; 
+			
+			float slopePara = calcWallAngles(ws);						// Parallel
+			
+			List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);
+			retPList.addAll(interPList1);
+			
+			float slopePerp = (-1.0f / slopePara);		// Perpendicular
+			
+			List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
+			retPList.addAll(interPList2);
+			
+			return retPList;
+		}
+		
 		public void placeFurnParallelToWall(LineSegement ws, HomePieceOfFurniture furn, Points furnCoords)
 		{
 			FurnLoc furnLoc = new FurnLoc();
