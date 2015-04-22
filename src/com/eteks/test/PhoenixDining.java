@@ -312,18 +312,58 @@ public class PhoenixDining extends Plugin
 				}
 				*/
 				
-				// 8, 9 ================================================ //
+				// 8,9 ================================================ //
+				
+				Points centerP = new Points(0.0f, 0.0f);
 				
 				List<LineSegement> wsList = getInnerWallSegements(home);
 				HomePieceOfFurniture hpf = home.getFurniture().get(0);
 				
 				for(LineSegement ws : wsList)
 				{					
-					placeFurnParallelToWall(ws, hpf.clone());					
-					placeFurnPerpendicularToWall(ws, hpf.clone());
+					placeFurnParallelToWall(ws, hpf.clone(), centerP);					
+					placeFurnPerpendicularToWall(ws, hpf.clone(), centerP);
+					JOptionPane.showMessageDialog(null, "****");
 				}
 				
+				// 10 ================================================ //
+				/*
+				Points centerP = new Points(0.0f, 0.0f);
+				float radius = 100.0f;
+				
+				float intercept = centerP.y; 
+				
+				List<LineSegement> wsList = getInnerWallSegements(home);
+				
+				int markerCol = 3;
+				
+				for(LineSegement ws : wsList)
+				{
+					float angle = calcWallAngles(ws);
+					float slope = (float)Math.tan(angle);
+					
+					List<Points> interPList = getIntersectionCircleLine2(centerP, radius, slope, intercept);
+				
+					if(markerCol == 3)
+						markerCol = 1;
+					else if(markerCol == 1)
+						markerCol = 3;
+						
+					for(Points p : interPList)
+					{
+						putMarkers(p, markerCol);
+					}
+					
+					Points midP = new Points(((ws.startP.x + ws.endP.x)/2), ((ws.startP.y + ws.endP.y)/2));
+					putMarkers(midP, 5);
+					
+					JOptionPane.showMessageDialog(null, "****");
+				}
+				
+				putMarkers(centerP, 0);
+				*/
 				// ================================================ //
+				
 			}
 			catch(Exception e)
 			{
@@ -331,21 +371,20 @@ public class PhoenixDining extends Plugin
 				//e.printStackTrace();
 			}
 		}
-		
-		public void placeFurnParallelToWall(LineSegement ws, HomePieceOfFurniture furn)
+				
+		public void placeFurnParallelToWall(LineSegement ws, HomePieceOfFurniture furn, Points furnCoords)
 		{
 			FurnLoc furnLoc = new FurnLoc();
 			float furnAngle =  calcWallAngles(ws);
 			
 			furnLoc.w = furn.getWidth();
-			furnLoc.ang = furnAngle;
-			
-			furnLoc.p = calcFurnMids(ws.startP, ws.endP, (0.5f*furn.getDepth() + FURNITURE_PLACE_TOLERANCE));	
+			furnLoc.ang = furnAngle;			
+			furnLoc.p = furnCoords;	
 			
 			placeFurnItem(furn, furnLoc);
 		}
 		
-		public void placeFurnPerpendicularToWall(LineSegement ws, HomePieceOfFurniture furn)
+		public void placeFurnPerpendicularToWall(LineSegement ws, HomePieceOfFurniture furn, Points furnCoords)
 		{
 			FurnLoc furnLoc = new FurnLoc();
 			float furnAngle = calcWallAngles(ws);
@@ -354,7 +393,7 @@ public class PhoenixDining extends Plugin
 			
 			furnLoc.w = furn.getWidth();
 			furnLoc.ang = furnAngle;			
-			furnLoc.p = calcFurnMids(ws.startP, ws.endP, (0.5f*furn.getWidth() + FURNITURE_PLACE_TOLERANCE));	
+			furnLoc.p = furnCoords;	
 			
 			placeFurnItem(furn, furnLoc);
 		}
@@ -965,6 +1004,62 @@ public class PhoenixDining extends Plugin
 						//putMarkers(inter2, false);
 					}
 				}				
+			}
+			catch(Exception e)
+			{
+				JOptionPane.showMessageDialog(null," -xxxxx- EXCEPTION : " + e.getMessage()); 
+				e.printStackTrace();
+			}
+			
+			return interList;
+		}
+		
+		public List<Points> getIntersectionCircleLine2(Points center, float rad, float slope, float intercept)
+		{
+			List<Points> interList = new ArrayList<Points>();
+			
+			try
+			{	
+				// Equation of Line
+				float m = slope;
+				float c = intercept;
+				
+				// (m^2+1)x^2 + 2(mc−mq−p)x + (q^2−r^2+p^2−2cq+c^2) = 0			
+				
+				float A = (m*m) + 1;
+				float B = 2*((m*c) - (m*center.y) - center.x);
+				float C = (center.y*center.y) - (rad*rad) + (center.x*center.x) - 2*(c*center.y) + (c*c);
+				
+				float D = (B*B) - 4*A*C;
+				
+				if(D == 0)
+				{
+					float x1 = ((-B) + (float)Math.sqrt(D)) / (2*A);
+					float y1 = (m*x1) + c;
+					
+					Points inter = new Points(x1, y1);
+					interList.add(inter);	
+					
+					//putMarkers(inter, true);
+				}
+				else if (D > 0)
+				{
+					float x1 = ((-B) + (float)Math.sqrt(D)) / (2*A);
+					float y1 = (m*x1) + c;
+					
+					Points inter1 = new Points(x1, y1);
+					interList.add(inter1);
+					
+					//putMarkers(inter1, false);
+					
+					float x2 = ((-B) - (float)Math.sqrt(D)) / (2*A);
+					float y2 = (m*x2) + c;
+					
+					Points inter2 = new Points(x2, y2);
+					interList.add(inter2);
+					
+					//putMarkers(inter2, false);
+				}		
 			}
 			catch(Exception e)
 			{
