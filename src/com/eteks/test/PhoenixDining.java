@@ -2,6 +2,8 @@ package com.eteks.test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeMap;
 
 import javax.swing.JOptionPane;
 
@@ -28,6 +30,7 @@ public class PhoenixDining extends Plugin
 	{		
 		public Home home = null;
 		public Room room = null;
+		public Room foyer = null;
 		public Room diningRoom = null;
 
 		public HomePieceOfFurniture diningRect = null;		
@@ -36,7 +39,11 @@ public class PhoenixDining extends Plugin
 		public HomePieceOfFurniture[] markBoxes = new HomePieceOfFurniture[MARKBOX_COUNT];
 		
 		public float ROOM_TOLERANCE = 0.51f;
-
+		public float FURN_TOLERANCE = 0.51f;
+		
+		public boolean bShowMarker = true;
+		public boolean bShowPathway = true;
+		
 		// ======================= CLASSES ======================= //
 
 		public class Points
@@ -188,7 +195,7 @@ public class PhoenixDining extends Plugin
 					JOptionPane.showMessageDialog(null," No room " );
 				*/
 				// ================================================ //
-				
+				/*
 				float tolerance = 0.5f;
 				
 				Points centerP = new Points(0.0f, 0.0f);
@@ -222,6 +229,38 @@ public class PhoenixDining extends Plugin
 				putMarkers(arcP1, 1);
 				putMarkers(arcP2, 1);
 				putMarkers(centerP, 2);
+				*/
+				// ================================================ //
+				/*
+				for(HomePieceOfFurniture hpf : home.getFurniture())
+				{					
+					if(hpf.getName().equalsIgnoreCase("diningrect"))
+					{
+						addAccesibilityRectTemp(hpf);
+						hpf.setX(100.0f);
+						hpf.setY(200.0f);
+						
+						break;
+					}
+				}
+				*/
+				// ================================================ //
+				
+				float tolerance = 0.5f;
+				
+				Points centerP = new Points(0.0f, 0.0f);
+				float radius = 100.0f;
+				
+				Points arcP1 = new Points(0.2f, -102.0f);
+				Points arcP2 = new Points(0.0f, 100.0f);
+
+				LineSegement lgfreeArcSeg = getLargestFreeArcSeg(centerP, arcP1, arcP2, radius, tolerance);
+				
+				if(lgfreeArcSeg!= null)
+				{
+					putMarkers(lgfreeArcSeg.startP, 4);
+					putMarkers(lgfreeArcSeg.endP, 4);
+				}
 				
 				// ================================================ //
 			}
@@ -231,7 +270,149 @@ public class PhoenixDining extends Plugin
 				//e.printStackTrace();
 			}
 		}
-
+		
+		
+		public LineSegement getLargestFreeArcSeg(Points center, Points pArc1, Points pArc2, float rad, float tolerance)
+		{			
+			LineSegement maxLS = null;
+			
+			List<LineSegement> arcSegList = generateFreeArcSegs(center, pArc1, pArc2, rad, tolerance);
+			float maxLength = 0.0f;
+			
+			for(LineSegement ls : arcSegList)
+			{
+				float dist = calcDistance(ls.startP, ls.endP);
+				
+				if(dist > maxLength)
+				{
+					maxLength = dist;
+					maxLS = ls;
+				}
+			}
+			
+			return maxLS;			
+		}
+		
+		public List<LineSegement> generateFreeArcSegs(Points center, Points pArc1, Points pArc2, float rad, float tolerance)
+		{
+			List<LineSegement> arcSegList = new ArrayList<LineSegement>();
+			
+			List<Points> interPList = getIntersectionInHome(center, pArc1, pArc2, rad, tolerance);
+			
+			if(bShowMarker)
+			{	
+				for(Points p : interPList)
+				{
+					putMarkers(p, 3);
+				}
+			}
+						
+			List<Points> sortedPList = sortPList(interPList, pArc1);
+			
+			List<Points> checkPList = new ArrayList<Points>();
+			checkPList.add(pArc1);
+			
+			if(sortedPList.size() > 0)
+				checkPList.addAll(sortedPList);
+			
+			checkPList.add(pArc2);		
+			
+			boolean bCheckP1 = checkPointBlocked(pArc1);
+					
+			if(bCheckP1)
+			{
+				for(int x = 1; (x+1) < checkPList.size();)
+				{
+					LineSegement freeAS = new LineSegement(checkPList.get(x), checkPList.get(x+1));
+					freeAS.parent = center;
+					arcSegList.add(freeAS);
+											
+					putMarkers(checkPList.get(x), 3);
+					putMarkers(checkPList.get(x+1), 3);
+					
+					x += 2;
+				}
+			}
+			else
+			{
+				for(int x = 0; (x+1) < checkPList.size();)
+				{
+					LineSegement freeAS = new LineSegement(checkPList.get(x), checkPList.get(x+1));
+					freeAS.parent = center;
+					arcSegList.add(freeAS);
+					
+					putMarkers(checkPList.get(x), 5);
+					putMarkers(checkPList.get(x+1), 5);
+					
+					x += 2;
+				}
+			}
+			
+			return arcSegList;			
+		}
+		
+		public List<Points> getIntersectionInHome(Points center, Points pArc1, Points pArc2, float rad, float tolerance)
+		{		
+			List<Points> interPList = new ArrayList<Points>();	
+			
+			for(float[][] fRects : furnRects)
+			{
+				List<Points> intList = getIntersectionArcRectangle(center, rad, fRects, pArc1, pArc2, tolerance);
+				interPList.addAll(intList);
+			}
+			
+			JOptionPane.showMessageDialog(null, interPList.size());
+			return interPList;
+		}
+		
+		
+		public boolean checkPointBlocked(Points test)
+		{
+			boolean bIsInside = false;
+			
+			for(HomePieceOfFurniture hpf : home.getFurniture())
+			{
+				String fName = hpf.getName();
+				
+				if(!markBoxName.contains(fName))
+				{
+					boolean bCheck1 = hpf.containsPoint(test.x, test.y, FURN_TOLERANCE);
+					
+					if(bCheck1)
+					{
+						bIsInside = true;
+						break;
+					}
+				}
+			}//JOptionPane.showMessageDialog(null, "1 :" +  bIsInside);
+			
+			if(!bIsInside)
+			{
+				for(Wall w : home.getWalls())
+				{
+					boolean bCheck2 = w.containsPoint(test.x, test.y, FURN_TOLERANCE);
+					
+					if(bCheck2)
+					{
+						bIsInside = true;
+						break;
+					}
+				}//JOptionPane.showMessageDialog(null, "2 :" +  bIsInside);
+			}
+			
+			if(!bIsInside)
+			{
+				boolean bCheck3 = room.containsPoint(test.x, test.y, ROOM_TOLERANCE);
+			
+				if(!bCheck3)
+				{
+					bIsInside = true;
+				}//JOptionPane.showMessageDialog(null, "3 :" +  bIsInside);
+			}
+				
+			return bIsInside;
+		}
+		
 		// ======================= INIT FUNCTIONS ======================= //
 
 		public void getDiningRect()
@@ -312,7 +493,75 @@ public class PhoenixDining extends Plugin
 			}
 		}
 		
+		public float[] getStartingPoints()
+		{
+			float[] startPoints = new float[4];
+			
+			for(Room r : home.getRooms())
+			{	
+				String roomName = (r.getName() != null) ? r.getName().trim() : "";
+				
+				if(!roomName.isEmpty() && roomName.equalsIgnoreCase("foyer"))
+				{
+					foyer = r;
+					
+					float[][] roomRect = r.getPoints();
+					
+					if(roomRect.length > 1)
+					{
+						startPoints[0] = roomRect[0][0];
+						startPoints[1] = roomRect[0][1];
+						startPoints[2] = roomRect[1][0];
+						startPoints[3] = roomRect[1][1];						
+					}
+				}
+			}
+			
+			return startPoints;
+		}
+		
 		// ======================= UTILITY FUNCTIONS ======================= //
+		
+		public List<Points> sortPList(List<Points> interPList, Points ref)
+		{
+			List<Points> retPList = new ArrayList<Points>();
+			TreeMap<Float, Points> pMap = new TreeMap<Float, Points>();
+			
+			for(Points p : interPList)
+			{
+				float dist = calcDistance(p, ref);
+				pMap.put(dist, p);
+			}
+			
+			Set<Float> keys = pMap.keySet();
+			
+			for(Float d : keys)
+			{
+				retPList.add(pMap.get(d));
+			}
+					
+			return retPList;
+		}
+		
+		public HomePieceOfFurniture addAccesibilityRect(HomePieceOfFurniture hp, float top, float right, float bottom, float left)
+		{
+			float w = hp.getWidth();
+			float d = hp.getDepth();
+			
+			hp.setWidth(w + right + left);
+			hp.setDepth(d + top + bottom);
+			
+			return hp;
+		}
+		
+		public void addAccesibilityRectTemp(HomePieceOfFurniture hp)
+		{
+			float w = hp.getWidth();
+			float d = hp.getDepth();
+			
+			hp.setWidth(2*w);
+			hp.setDepth(2*d);
+		}
 		
 		public List<Points> getIntersectionArcRectangle(Points center, float rad, float[][] furnRect, Points arcP1, Points arcP2, float tolerance)
 		{
