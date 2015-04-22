@@ -128,7 +128,7 @@ public class PhoenixDining extends Plugin
 				storeAllFurnRects(home);
 				storeAllWallRects(home);
 				
-				// ================================================ //
+				// 1 ================================================ //
 				/*
 				Points startP = new Points(100.0f, 0.0f);
 				Points endP = new Points(-100.0f, 0.0f);
@@ -147,7 +147,8 @@ public class PhoenixDining extends Plugin
 				putMarkers(endP, 1);
 				putMarkers(centerP, 3);
 				*/
-				// ================================================ //
+				
+				// 2 ================================================ //
 				/*
 				Points startP = new Points(400.0f, -100.0f);
 				Points endP = new Points(-400.0f, -100.0f);
@@ -172,6 +173,7 @@ public class PhoenixDining extends Plugin
 				putMarkers(startP, 4);
 				putMarkers(endP, 4);
 				*/
+				
 				// ================================================ //
 				/*
 				float tolerance = 0.5f;
@@ -199,7 +201,8 @@ public class PhoenixDining extends Plugin
 				putMarkers(arcP2, 1);
 				putMarkers(centerP, 2);
 				*/
-				// ================================================ //
+				
+				// 3 ================================================ //
 				/*
 				float tolerance = 0.5f;
 				
@@ -225,7 +228,8 @@ public class PhoenixDining extends Plugin
 				else
 					JOptionPane.showMessageDialog(null," No room " );
 				*/
-				// ================================================ //
+				
+				// 4 ================================================ //
 				/*
 				float tolerance = 0.5f;
 				
@@ -261,7 +265,7 @@ public class PhoenixDining extends Plugin
 				putMarkers(arcP2, 1);
 				putMarkers(centerP, 2);
 				*/
-				// ================================================ //
+				// 5 ================================================ //
 				/*
 				for(HomePieceOfFurniture hpf : home.getFurniture())
 				{					
@@ -275,7 +279,8 @@ public class PhoenixDining extends Plugin
 					}
 				}
 				*/
-				// ================================================ //
+				
+				// 6 ================================================ //
 				/*
 				float tolerance = 0.5f;
 				
@@ -293,7 +298,8 @@ public class PhoenixDining extends Plugin
 					putMarkers(lgfreeArcSeg.endP, 4);
 				}
 				*/
-				// ================================================ //
+				
+				// 7 ================================================ //
 				/*
 				LineSegement longestSeg = getLongestSideOfRoom(diningRoom);
 				
@@ -305,7 +311,8 @@ public class PhoenixDining extends Plugin
 					JOptionPane.showMessageDialog(null, calcDistance(longestSeg.startP, longestSeg.endP));
 				}
 				*/
-				// ================================================ //
+				
+				// 8, 9 ================================================ //
 				
 				List<LineSegement> wsList = getInnerWallSegements(home);
 				HomePieceOfFurniture hpf = home.getFurniture().get(0);
@@ -328,23 +335,7 @@ public class PhoenixDining extends Plugin
 		public void placeFurnParallelToWall(LineSegement ws, HomePieceOfFurniture furn)
 		{
 			FurnLoc furnLoc = new FurnLoc();
-			float furnAngle = 0.0f;
-			
-			float wsAngle =  (float) Math.atan((Math.abs(ws.endP.y - ws.startP.y)) / (Math.abs(ws.endP.x - ws.startP.x))); 
-			
-			Points p = new Points((ws.startP.x - ws.endP.x), (ws.startP.y - ws.endP.y));
-			int qIndx = getQuadrantInfo(p);
-			
-			//int qIndx = getQuadrantInfo(ws.endP);
-			
-			if(qIndx == 1)
-				furnAngle = wsAngle;
-			else if(qIndx == 2)
-				furnAngle = (float)(Math.PI) - wsAngle;
-			else if(qIndx == 3)
-				furnAngle = (float)(Math.PI) + wsAngle;
-			else if(qIndx == 4)
-				furnAngle = (float)(2.0f*Math.PI) - wsAngle;
+			float furnAngle =  calcWallAngles(ws);
 			
 			furnLoc.w = furn.getWidth();
 			furnLoc.ang = furnAngle;
@@ -352,30 +343,12 @@ public class PhoenixDining extends Plugin
 			furnLoc.p = calcFurnMids(ws.startP, ws.endP, (0.5f*furn.getDepth() + FURNITURE_PLACE_TOLERANCE));	
 			
 			placeFurnItem(furn, furnLoc);
-			
-			//JOptionPane.showMessageDialog(null, (wsAngle * (float)(180.0f / Math.PI)) + " -> " + (furnAngle  * (float)(180.0f / Math.PI)) + " : " + qIndx);
 		}
 		
 		public void placeFurnPerpendicularToWall(LineSegement ws, HomePieceOfFurniture furn)
 		{
 			FurnLoc furnLoc = new FurnLoc();
-			float furnAngle = 0.0f;
-			
-			float wsAngle =  (float) Math.atan((Math.abs(ws.endP.y - ws.startP.y)) / (Math.abs(ws.endP.x - ws.startP.x))); 
-			
-			Points p = new Points((ws.startP.x - ws.endP.x), (ws.startP.y - ws.endP.y));
-			int qIndx = getQuadrantInfo(p);
-			
-			//int qIndx = getQuadrantInfo(ws.endP);
-			
-			if(qIndx == 1)
-				furnAngle = wsAngle;
-			else if(qIndx == 2)
-				furnAngle = (float)(Math.PI) - wsAngle;
-			else if(qIndx == 3)
-				furnAngle = (float)(Math.PI) + wsAngle;
-			else if(qIndx == 4)
-				furnAngle = (float)(2.0f*Math.PI) - wsAngle;
+			float furnAngle = calcWallAngles(ws);
 			
 			furnAngle += (float)(Math.PI/2.0f);
 			
@@ -384,8 +357,27 @@ public class PhoenixDining extends Plugin
 			furnLoc.p = calcFurnMids(ws.startP, ws.endP, (0.5f*furn.getWidth() + FURNITURE_PLACE_TOLERANCE));	
 			
 			placeFurnItem(furn, furnLoc);
+		}
+		
+		public float calcWallAngles(LineSegement ws)
+		{
+			float retAngle = 0.0f;
 			
-			//JOptionPane.showMessageDialog(null, (wsAngle * (float)(180.0f / Math.PI)) + " -> " + (furnAngle  * (float)(180.0f / Math.PI)) + " : " + qIndx);
+			float wsAngle =  (float) Math.atan((Math.abs(ws.endP.y - ws.startP.y)) / (Math.abs(ws.endP.x - ws.startP.x))); 
+			
+			Points p = new Points((ws.startP.x - ws.endP.x), (ws.startP.y - ws.endP.y));
+			int qIndx = getQuadrantInfo(p);
+			
+			if(qIndx == 1)
+				retAngle = wsAngle;
+			else if(qIndx == 2)
+				retAngle = (float)(Math.PI) - wsAngle;
+			else if(qIndx == 3)
+				retAngle = (float)(Math.PI) + wsAngle;
+			else if(qIndx == 4)
+				retAngle = (float)(2.0f*Math.PI) - wsAngle;
+			
+			return retAngle;
 		}
 		
  		public LineSegement getLongestSideOfRoom(Room r)
