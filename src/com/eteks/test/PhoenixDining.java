@@ -245,7 +245,7 @@ public class PhoenixDining extends Plugin
 				}
 				*/
 				// ================================================ //
-				
+				/*
 				float tolerance = 0.5f;
 				
 				Points centerP = new Points(0.0f, 0.0f);
@@ -254,12 +254,24 @@ public class PhoenixDining extends Plugin
 				Points arcP1 = new Points(0.2f, -102.0f);
 				Points arcP2 = new Points(0.0f, 100.0f);
 
-				LineSegement lgfreeArcSeg = getLargestFreeArcSeg(centerP, arcP1, arcP2, radius, tolerance);
+				LineSegement lgfreeArcSeg = getLongestFreeArcSeg(centerP, arcP1, arcP2, radius, tolerance);
 				
 				if(lgfreeArcSeg!= null)
 				{
 					putMarkers(lgfreeArcSeg.startP, 4);
 					putMarkers(lgfreeArcSeg.endP, 4);
+				}
+				*/
+				// ================================================ //
+				
+				LineSegement longestSeg = getLongestSideOfRoom(diningRoom);
+				
+				if(longestSeg!= null)
+				{
+					putMarkers(longestSeg.startP, 4);
+					putMarkers(longestSeg.endP, 4);
+					
+					JOptionPane.showMessageDialog(null, calcDistance(longestSeg.startP, longestSeg.endP));
 				}
 				
 				// ================================================ //
@@ -271,8 +283,39 @@ public class PhoenixDining extends Plugin
 			}
 		}
 		
+		public LineSegement getLongestSideOfRoom(Room r)
+		{
+			LineSegement longSeg = null;		
+
+			float maxLen = 0.0f;
+			float[][] roomRect = r.getPoints();
+			
+			if(roomRect.length > 2)
+			{			
+				for(int f = 0; f < roomRect.length; f++)
+				{
+					Points startLine = new Points(roomRect[f][0], roomRect[f][1]);					
+					Points endLine = null;
+					
+					if(f == (roomRect.length - 1))
+						endLine = new Points(roomRect[0][0], roomRect[0][1]);
+					else
+						endLine = new Points(roomRect[f+1][0], roomRect[f+1][1]);				
+					
+					float len = calcDistance(startLine, endLine);
+					
+					if(len > maxLen)
+					{
+						maxLen = len;
+						longSeg = new LineSegement(startLine, endLine);
+					}
+				}
+			}
+			
+			return longSeg;
+		}
 		
-		public LineSegement getLargestFreeArcSeg(Points center, Points pArc1, Points pArc2, float rad, float tolerance)
+		public LineSegement getLongestFreeArcSeg(Points center, Points pArc1, Points pArc2, float rad, float tolerance)
 		{			
 			LineSegement maxLS = null;
 			
@@ -364,7 +407,6 @@ public class PhoenixDining extends Plugin
 			JOptionPane.showMessageDialog(null, interPList.size());
 			return interPList;
 		}
-		
 		
 		public boolean checkPointBlocked(Points test)
 		{
