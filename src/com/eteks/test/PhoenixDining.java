@@ -2,6 +2,7 @@ package com.eteks.test;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.swing.JOptionPane;
 
 import com.eteks.sweethome3d.model.CatalogPieceOfFurniture;
@@ -9,6 +10,7 @@ import com.eteks.sweethome3d.model.FurnitureCategory;
 import com.eteks.sweethome3d.model.Home;
 import com.eteks.sweethome3d.model.HomePieceOfFurniture;
 import com.eteks.sweethome3d.model.Room;
+import com.eteks.sweethome3d.model.Wall;
 import com.eteks.sweethome3d.plugin.Plugin;
 import com.eteks.sweethome3d.plugin.PluginAction;
 
@@ -26,11 +28,14 @@ public class PhoenixDining extends Plugin
 	{		
 		public Home home = null;
 		public Room room = null;
+		public Room diningRoom = null;
 
-		public HomePieceOfFurniture dining = null;		
+		public HomePieceOfFurniture diningRect = null;		
 
 		public int MARKBOX_COUNT = 6;
 		public HomePieceOfFurniture[] markBoxes = new HomePieceOfFurniture[MARKBOX_COUNT];
+		
+		public float ROOM_TOLERANCE = 0.51f;
 
 		// ======================= CLASSES ======================= //
 
@@ -78,7 +83,12 @@ public class PhoenixDining extends Plugin
 				room = home.getRooms().get(0);
 	
 				//getDiningRect();
+				getDiningRoom();
+				
 				markBoxes = getMarkerBoxes();
+				
+				storeAllFurnRects(home);
+				storeAllWallRects(home);
 				
 				// ================================================ //
 				/*
@@ -100,29 +110,120 @@ public class PhoenixDining extends Plugin
 				putMarkers(centerP, 3);
 				*/
 				// ================================================ //
-				
-				Points startP = new Points(100.0f, 0.0f);
-				Points endP = new Points(-100.0f, 0.0f);
+				/*
+				Points startP = new Points(400.0f, -100.0f);
+				Points endP = new Points(-400.0f, -100.0f);
 				
 				Points centerP = new Points(0.0f, 0.0f);
 				float radius = 200.0f;
 				
-				Points arcP1 = new Points(100.0f, 0.0f);
-				Points arcP2 = new Points(-100.0f, 0.0f);
+				Points arcP2 = new Points(-199.0f, -20.0f);
+				Points arcP1 = new Points(200.0f, 0.0f);
 				
-				List<Points> circLinePList = getIntersectionCircleLine(centerP, radius, startP, endP);
+				List<Points> circLineSPList = getIntersectionArcLineSeg(centerP, radius, startP, endP, arcP1, arcP2);
 				
-				for(Points p : circLinePList)
+				for(Points p : circLineSPList)
 				{
-					putMarkers(p, 2);
+					putMarkers(p, 3);
 				}
 				
-				putMarkers(startP, 1);
-				putMarkers(endP, 1);
-				putMarkers(centerP, 3);
+				putMarkers(arcP1, 1);
+				putMarkers(arcP2, 1);
+				putMarkers(centerP, 2);
+				
+				putMarkers(startP, 4);
+				putMarkers(endP, 4);
+				*/
+				// ================================================ //
+				/*
+				float tolerance = 0.5f;
+				
+				Points centerP = new Points(0.0f, 0.0f);
+				float radius = 200.0f;
+				
+				Points arcP2 = new Points(-199.0f, -20.0f);
+				Points arcP1 = new Points(200.0f, 0.0f);
+				
+				List<Points> masterFurnArcPList = new ArrayList<Points>();
+				
+				for(float[][] fRect : furnRects)
+				{
+					List<Points> furnArcPList = getIntersectionArcRectangle(centerP, radius, fRect, arcP1, arcP2, tolerance);
+					masterFurnArcPList.addAll(furnArcPList);
+				}
+				
+				for(Points p : masterFurnArcPList)
+				{
+					putMarkers(p, 3);
+				}
+				
+				putMarkers(arcP1, 1);
+				putMarkers(arcP2, 1);
+				putMarkers(centerP, 2);
+				*/
+				// ================================================ //
+				/*
+				float tolerance = 0.5f;
+				
+				Points centerP = new Points(0.0f, 0.0f);
+				float radius = 300.0f;
+				
+				Points arcP1 = new Points(173.2f, -173.2f);
+				Points arcP2 = new Points(0.0f, 300.0f);
+
+				if(diningRoom != null)
+				{
+					List<Points> furnArcPList = getIntersectionArcRectangle(centerP, radius, diningRoom.getPoints(), arcP1, arcP2, tolerance);
+					
+					for(Points p : furnArcPList)
+					{
+						putMarkers(p, 3);
+					}
+					
+					putMarkers(arcP1, 1);
+					putMarkers(arcP2, 1);
+					putMarkers(centerP, 2);
+				}
+				else
+					JOptionPane.showMessageDialog(null," No room " );
+				*/
+				// ================================================ //
+				
+				float tolerance = 0.5f;
+				
+				Points centerP = new Points(0.0f, 0.0f);
+				float radius = 300.0f;
+				
+				Points arcP1 = new Points(173.2f, -173.2f);
+				Points arcP2 = new Points(0.0f, 300.0f);
+				
+				List<Points> masterFurnArcPList = new ArrayList<Points>();
+				
+				for(float[][] fRect : furnRects)
+				{
+					List<Points> furnArcPList = getIntersectionArcRectangle(centerP, radius, fRect, arcP1, arcP2, tolerance);
+					masterFurnArcPList.addAll(furnArcPList);
+				}
+
+				if(diningRoom != null)
+				{
+					List<Points> diningArcPList = getIntersectionArcRectangle(centerP, radius, diningRoom.getPoints(), arcP1, arcP2, tolerance);
+					masterFurnArcPList.addAll(diningArcPList);
+				}
+				else
+					JOptionPane.showMessageDialog(null," No room " );
+				
+				
+				for(Points p : masterFurnArcPList)
+				{
+					putMarkers(p, 3);
+				}
+				
+				putMarkers(arcP1, 1);
+				putMarkers(arcP2, 1);
+				putMarkers(centerP, 2);
 				
 				// ================================================ //
-			
 			}
 			catch(Exception e)
 			{
@@ -139,11 +240,78 @@ public class PhoenixDining extends Plugin
 			{			
 				if(hpf.getName().equalsIgnoreCase("diningrect"))
 				{
-					dining = hpf;					
+					diningRect = hpf;
+					break;
 				}
 			}
 		}
 
+		public void getDiningRoom()
+		{			
+			for(Room r : home.getRooms())
+			{			
+				String roomName = r.getName();
+				
+				if((roomName != null) && (roomName.equalsIgnoreCase("dining")))
+				{
+					diningRoom = r;
+					break;
+				}
+			}
+		}
+		
+		public void storeAllFurnRects(Home h)
+		{			
+			for(HomePieceOfFurniture hp: h.getFurniture())
+			{
+				String fName = hp.getName();
+				
+				if(!fName.equals("boxred") && !fName.equals("boxgreen") )
+				{
+					//furnList.add(hp);					
+					furnIds.add(fName);
+					furnRects.add(hp.getPoints());
+					furnThicks.add(0.0f);
+				}
+			}
+		}
+				
+		public void storeAllWallRects(Home h)
+		{
+			int wallCount = 1;
+			
+			for(Wall w: h.getWalls())
+			{
+				furnIds.add("wall_" + wallCount);				
+				float[][] wRect = w.getPoints();
+				
+				List<Points> validPoints = new ArrayList<Points>();
+						
+				for(int ws = 0; ws < wRect.length; ws++)
+				{
+					Points p = new Points(wRect[ws][0], wRect[ws][1]);
+					
+					if(room.containsPoint(p.x, p.y, (ROOM_TOLERANCE * w.getThickness())))
+						validPoints.add(p);
+				}
+				
+				//JOptionPane.showMessageDialog(null, wallCount + ":" + validPoints.size());
+						
+				float[][] validRect = new float[validPoints.size()][2];
+				
+				for(int i = 0; i < validPoints.size(); i++)
+				{
+					validRect[i][0] = validPoints.get(i).x;
+					validRect[i][1] = validPoints.get(i).y;
+				}
+				
+				furnRects.add(validRect);
+				furnThicks.add(w.getThickness());		
+							
+				wallCount++;
+			}
+		}
+		
 		// ======================= UTILITY FUNCTIONS ======================= //
 		
 		public List<Points> getIntersectionArcRectangle(Points center, float rad, float[][] furnRect, Points arcP1, Points arcP2, float tolerance)
@@ -317,7 +485,6 @@ public class PhoenixDining extends Plugin
 			
 			return retList;
 		}
-		
 		
 		public List<Points> getIntersectionTwoCircle(Points centerC, float radC, Points centerArc, float radArc)
 		{
