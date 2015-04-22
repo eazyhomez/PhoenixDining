@@ -41,6 +41,9 @@ public class PhoenixDining extends Plugin
 		public float ROOM_TOLERANCE = 0.51f;
 		public float FURN_TOLERANCE = 0.51f;
 		
+		public float ORIENTATION_TOLERANCE = 0.05f;
+		public float FURNITURE_PLACE_TOLERANCE = 0.0f;	// 0cm  // 5cm
+		
 		public boolean bShowMarker = true;
 		public boolean bShowPathway = true;
 		
@@ -72,6 +75,34 @@ public class PhoenixDining extends Plugin
 			}
 		}
 
+		public class FurnLoc
+		{
+			float w;
+			float h;
+			float el;
+			float ang;
+			Points p;
+			
+			public FurnLoc(float wIn, float hIn, float elIn, float angIn, Points coord)
+			{
+				w = wIn;
+				h = hIn;
+				el = elIn;
+				ang = angIn;
+				p = coord;
+			}
+			
+			public FurnLoc()
+			{
+				w = 0.0f;
+				h = 0.0f;
+				el = 0.0f;
+				ang = 0.0f;
+			}
+		}
+		
+		// ======================= CODE ======================= //
+		
 		public RoomTestAction() 
 		{
 			putPropertyValue(Property.NAME, "PhoenixDining");
@@ -263,7 +294,7 @@ public class PhoenixDining extends Plugin
 				}
 				*/
 				// ================================================ //
-				
+				/*
 				LineSegement longestSeg = getLongestSideOfRoom(diningRoom);
 				
 				if(longestSeg!= null)
@@ -272,6 +303,13 @@ public class PhoenixDining extends Plugin
 					putMarkers(longestSeg.endP, 4);
 					
 					JOptionPane.showMessageDialog(null, calcDistance(longestSeg.startP, longestSeg.endP));
+				}
+				*/
+				// ================================================ //
+				
+				for(Wall w : home.getWalls())
+				{
+					//moveFurnParallelToWall
 				}
 				
 				// ================================================ //
@@ -283,7 +321,23 @@ public class PhoenixDining extends Plugin
 			}
 		}
 		
-		public LineSegement getLongestSideOfRoom(Room r)
+		public void moveFurnParallelToWall(LineSegement ws, HomePieceOfFurniture furn)
+		{
+			FurnLoc furnLoc = new FurnLoc();
+			
+			float wsAngle = (float) Math.atan((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x)); 
+			
+			furnLoc.w = furn.getWidth();
+			furnLoc.ang = wsAngle;
+			
+			furnLoc.p = calcFurnMids(ws.startP, ws.endP, (0.5f*furn.getDepth() + FURNITURE_PLACE_TOLERANCE));	
+			
+			placeFurnItem(furn, furnLoc);							
+			chkFurnOrient(furn, ws);		
+		}
+		
+		
+ 		public LineSegement getLongestSideOfRoom(Room r)
 		{
 			LineSegement longSeg = null;		
 
@@ -563,6 +617,83 @@ public class PhoenixDining extends Plugin
 		}
 		
 		// ======================= UTILITY FUNCTIONS ======================= //
+		
+		public void placeFurnItem(HomePieceOfFurniture inFurn, FurnLoc fLoc)
+		{
+			HomePieceOfFurniture outFurn = inFurn;
+			outFurn.setName(inFurn.getName());
+			outFurn.setWidth(fLoc.w);
+			outFurn.setAngle(fLoc.ang);
+			outFurn.setX(fLoc.p.x);
+			outFurn.setY(fLoc.p.y);
+			
+			home.addPieceOfFurniture(outFurn);
+		}
+
+		public void chkFurnOrient(HomePieceOfFurniture furn, LineSegement ws)
+		{			
+			float[][] fRect = furn.getPoints();
+			Points furnBottMid = new Points(((fRect[2][0] + fRect[3][0]) / 2),  ((fRect[2][1] + fRect[3][1]) / 2));
+			
+			Points wsMid = new Points(((ws.startP.x + ws.endP.x) / 2),  ((ws.startP.y + ws.endP.y) / 2));
+			
+			float dist = calcDistance(furnBottMid, wsMid);
+			//JOptionPane.showMessageDialog(null, "dist : " + dist);
+			
+			if(dist > ORIENTATION_TOLERANCE)
+			{
+				furn.setAngle((float)Math.PI);
+				//JOptionPane.showMessageDialog(null, "180 rotation");
+			}
+		}
+		
+		public Points calcFurnMids(Points p1, Points p2, float d)
+		{
+			Points retPoints = null;
+			
+			float l = calcDistance(p1,p2);
+			float r = (float)Math.sqrt((d*d) + (0.25f*l*l));
+			
+			float e = (p2.x - p1.x);
+			float f = (p2.y - p1.y);
+			float p = (float)Math.sqrt((e*e + f*f));
+			float k = (0.5f * p);
+			
+			float x1 = p1.x + (e*k/p) + (f/p)*((float)Math.sqrt((r*r - k*k)));
+			float y1 = p1.y + (f*k/p) - (e/p)*((float)Math.sqrt((r*r - k*k)));
+			
+			float x2 = p1.x + (e*k/p) - (f/p)*((float)Math.sqrt((r*r - k*k)));
+			float y2 = p1.y + (f*k/p) + (e/p)*((float)Math.sqrt((r*r - k*k)));
+			
+			// Check for inRoom
+			if(room.containsPoint(x1, y1, 0.0f))
+			{
+				retPoints = new Points(x1, y1);
+			}
+			else if(room.containsPoint(x2, y2, 0.0f))
+			{
+				retPoints = new Points(x2, y2);
+			}
+			
+			return retPoints;
+					
+			/*
+			 	Let the centers be: (a,b), (c,d)
+				Let the radii be: r, s
+					
+				  e = c - a                          [difference in x coordinates]
+				  f = d - b                          [difference in y coordinates]
+				  p = sqrt(e^2 + f^2)                [distance between centers]
+				  k = (p^2 + r^2 - s^2)/(2p)         [distance from center 1 to line joining points of intersection]
+				   
+				                                      
+				  x = a + ek/p + (f/p)sqrt(r^2 - k^2)
+				  y = b + fk/p - (e/p)sqrt(r^2 - k^2)
+				OR
+				  x = a + ek/p - (f/p)sqrt(r^2 - k^2)
+				  y = b + fk/p + (e/p)sqrt(r^2 - k^2)		
+			*/
+		}
 		
 		public List<Points> sortPList(List<Points> interPList, Points ref)
 		{
