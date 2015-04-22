@@ -16,6 +16,7 @@ import com.eteks.sweethome3d.model.Wall;
 import com.eteks.sweethome3d.plugin.Plugin;
 import com.eteks.sweethome3d.plugin.PluginAction;
 
+
 public class PhoenixDining extends Plugin 
 {
 
@@ -44,9 +45,15 @@ public class PhoenixDining extends Plugin
 		public float ORIENTATION_TOLERANCE = 0.05f;
 		public float FURNITURE_PLACE_TOLERANCE = 0.0f;	// 0cm  // 5cm
 		
+		public float TOLERANCE_PERCENT = 0.02f;		//0.05f;		
+		public float INFINITY_COORDS = 10000.0f;
+		
+		public float FURNITURE_BLOAT_SIZE = 2.0f;	// 2cm
+		
 		public boolean bShowMarker = true;
 		public boolean bShowPathway = true;
 		
+		public String refFurnId = "";
 		// ======================= CLASSES ======================= //
 
 		public class Points
@@ -54,6 +61,12 @@ public class PhoenixDining extends Plugin
 			float x;
 			float y;
 
+			public Points()
+			{
+				x = -10.0f;
+				y = -10.0f;
+			}
+			
 			public Points(float xCoord , float yCoord)
 			{
 				x = xCoord;
@@ -98,6 +111,18 @@ public class PhoenixDining extends Plugin
 				h = 0.0f;
 				el = 0.0f;
 				ang = 0.0f;
+			}
+		}
+		
+		public class Intersect
+		{
+			Points p;
+			float dist;
+			
+			public Intersect(Points inP, float inD)
+			{
+				p = inP;
+				dist = inD;
 			}
 		}
 		
@@ -362,7 +387,7 @@ public class PhoenixDining extends Plugin
 				putMarkers(centerP, 0);
 				*/
 				// 11 ================================================ //
-				
+				/*
 				HomePieceOfFurniture hpf = home.getFurniture().get(0);
 				
 				Points centerP = new Points(0.0f, 0.0f);
@@ -386,10 +411,21 @@ public class PhoenixDining extends Plugin
 				Points midP = new Points(((ws.startP.x + ws.endP.x)/2), ((ws.startP.y + ws.endP.y)/2));
 				putMarkers(midP, 5);
 				
-				JOptionPane.showMessageDialog(null, "****");
+				//JOptionPane.showMessageDialog(null, "****");
+				*/
+				// 12 ================================================ //
+				
+				List<HomePieceOfFurniture> hpfList = home.getFurniture();
+				
+				HomePieceOfFurniture hpf = hpfList.get(hpfList.size() - 1);
+				refFurnId = hpf.getName();
+				
+				boolean bIntersects = checkIntersectWithAllFurns(hpf);
+				
+				JOptionPane.showMessageDialog(null, bIntersects);
 				
 				// ================================================ //
-				
+
 			}
 			catch(Exception e)
 			{
@@ -670,13 +706,19 @@ public class PhoenixDining extends Plugin
 			{
 				String fName = hp.getName();
 				
-				if(!fName.equals("boxred") && !fName.equals("boxgreen") )
-				{
-					//furnList.add(hp);					
-					furnIds.add(fName);
-					furnRects.add(hp.getPoints());
-					furnThicks.add(0.0f);
-				}
+				furnIds.add(fName);
+				furnRects.add(hp.getPoints());
+				furnThicks.add(0.0f);
+				
+				HomePieceOfFurniture hClone = hp.clone();
+				float d = hp.getDepth();
+				float w = hp.getWidth();
+				
+				hClone.setDepth(d + FURNITURE_BLOAT_SIZE);
+				hClone.setWidth(w + FURNITURE_BLOAT_SIZE);
+				hClone.setElevation(0.0f);
+				
+				furnRectsBloated.add(hClone.getPoints());
 			}
 		}
 				
@@ -744,6 +786,163 @@ public class PhoenixDining extends Plugin
 		}
 		
 		// ======================= UTILITY FUNCTIONS ======================= //
+		
+		public boolean checkIntersectWithAllFurns(HomePieceOfFurniture hpf)
+		{
+			boolean bIntersects = false;
+			List<LineSegement> lsList = new ArrayList<LineSegement>();
+			
+			float[][] refFurnRect = hpf.getPoints(); 
+			
+			for(int f = 0; f < refFurnRect.length; f++)
+			{
+				Points startLine = new Points(refFurnRect[f][0], refFurnRect[f][1]);
+				
+				Points endLine = null;
+				
+				if(f == (refFurnRect.length - 1))
+					endLine = new Points(refFurnRect[0][0], refFurnRect[0][1]);
+				else
+					endLine = new Points(refFurnRect[f+1][0], refFurnRect[f+1][1]);				
+				
+				LineSegement ls = new LineSegement(startLine, endLine);
+				lsList.add(ls);
+			}
+			
+			for(LineSegement ls: lsList)			
+			{
+				for(String furnId : furnIds)
+				{
+					if(!refFurnId.equalsIgnoreCase(furnId))
+					{
+						List<Intersect> interList = checkIntersect(ls, furnId);
+					
+						for(Intersect inter : interList)
+						{
+							if(inter != null)
+							{
+								bIntersects = checkPointInBetween(inter.p, ls.startP, ls.endP, FURN_TOLERANCE);
+								
+								if(bIntersects)
+									break;
+							}
+							putMarkers(inter.p, 3);
+						}
+					}
+					
+					if(bIntersects)
+						break;
+				}
+				
+				if(bIntersects)
+					break;
+			}
+			
+			return bIntersects;
+		}
+		
+		public List<Intersect> checkIntersect(LineSegement r, String furnId)
+		{
+			List<Intersect> interList = new ArrayList<Intersect>();
+			
+			Intersect inter = null;
+			int indx = -1;
+			
+			if((indx = furnIds.indexOf(furnId)) > -1)
+			{ 				
+				float[][] fRect = furnRects.get(indx);
+				//float[][] fRect = furnRectsBloated.get(indx);
+						
+				if(fRect.length == 2)
+				{
+					LineSegement l1 = new LineSegement((new Points(fRect[0][0], fRect[0][1])) , (new Points(fRect[1][0], fRect[1][1])));
+					
+					inter = getIntersectPoint(r, l1);				
+					if(inter.dist < INFINITY_COORDS)
+						interList.add(inter);
+					
+					//debug += ("1. " + inter.p.x + "," + inter.p.y + " -> " + inter.dist + "\n");
+				}
+				else if(fRect.length == 4)
+				{
+					LineSegement l1 = new LineSegement((new Points(fRect[0][0], fRect[0][1])) , (new Points(fRect[1][0], fRect[1][1])));
+					LineSegement l2 = new LineSegement((new Points(fRect[1][0], fRect[1][1])) , (new Points(fRect[2][0], fRect[2][1])));
+					LineSegement l3 = new LineSegement((new Points(fRect[2][0], fRect[2][1])) , (new Points(fRect[3][0], fRect[3][1])));
+					LineSegement l4 = new LineSegement((new Points(fRect[3][0], fRect[3][1])) , (new Points(fRect[0][0], fRect[0][1])));
+					
+					inter = getIntersectPoint(r, l1);				
+					if(inter.dist < INFINITY_COORDS)
+						interList.add(inter);
+					
+					//debug += ("1. " + inter.p.x + "," + inter.p.y + " -> " + inter.dist + "\n");
+					
+					inter = getIntersectPoint(r, l2);				
+					if(inter.dist < INFINITY_COORDS)
+						interList.add(inter);
+					
+					//debug += ("2. " + inter.p.x + "," + inter.p.y + " -> " + inter.dist + "\n");
+					
+					inter = getIntersectPoint(r, l3);
+					if(inter.dist < INFINITY_COORDS)
+						interList.add(inter);
+					
+					//debug += ("3. " + inter.p.x + "," + inter.p.y + " -> " + inter.dist + "\n");
+					
+					inter = getIntersectPoint(r, l4);
+					if(inter.dist < INFINITY_COORDS)
+						interList.add(inter);
+					
+					//debug += ("4. " + inter.p.x + "," + inter.p.y + " -> " + inter.dist + "\n");
+				}
+				//JOptionPane.showMessageDialog(null, debug);					
+			}
+			
+			return interList;
+		}
+		
+		public Intersect getIntersectPoint(LineSegement ref, LineSegement l)
+		{
+			Intersect inter = new Intersect((new Points()), 0.0f);
+			
+			float A = (ref.endP.y - ref.startP.y);											// (y2 - y1)
+			float B = (ref.startP.x - ref.endP.x);											// (x1 - x2)		
+			float C = ((ref.endP.y * ref.startP.x) - (ref.startP.y * ref.endP.x));			// (y2x1 - y1x2)
+			
+			float P = (l.endP.y - l.startP.y);												// (y2' - y1')
+			float Q = (l.startP.x - l.endP.x);												// (x1' - x2')		
+			float R = ((l.endP.y * l.startP.x) - (l.startP.y * l.endP.x));					// (y2'x1' - y1'x2')
+			
+			float yNum = (P*C - R*A);
+			float yDen = (P*B - Q*A);
+
+			float xNum = (Q*C - R*B);
+			float xDen = (Q*A - P*B);
+			
+			if((xDen == 0.0f) || (yDen == 0.0f))
+			{
+				inter.p = new Points(2*INFINITY_COORDS, 2*INFINITY_COORDS);
+				inter.dist = INFINITY_COORDS;
+			}
+			else
+			{
+				inter.p = new Points((xNum/xDen), (yNum/yDen));				
+				boolean bC1 = checkPointInBetween(inter.p, l.startP, l.endP, FURN_TOLERANCE);
+				
+				//JOptionPane.showMessageDialog(null, bC1 + " /  Intersection -> X : " + inter.p.x + ", Y : " + inter.p.y);
+				
+				if(bC1)
+				{		
+					inter.dist = calcDistance(inter.p, ref.startP);					
+				}
+				else
+				{
+					inter.p = new Points(INFINITY_COORDS, INFINITY_COORDS);
+					inter.dist = INFINITY_COORDS;
+				}
+			}
+			
+			return inter;			
+		}
 		
 		public List<LineSegement> getInnerWallSegements(Home h)
 		{	
