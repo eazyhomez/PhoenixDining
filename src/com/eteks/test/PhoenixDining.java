@@ -126,6 +126,34 @@ public class PhoenixDining extends Plugin
 			}
 		}
 		
+		public class ChordPoints
+		{
+			Points p;
+			int lsIndx;
+			
+			public ChordPoints(Points inP, int inLSIndx)
+			{
+				p = inP;
+				lsIndx = inLSIndx;
+			}
+		}
+		
+		public class ChordSegements
+		{
+			Points startP;
+			Points endP;
+			int startLSIndx;
+			int endLSIndx;
+			
+			public ChordSegements(Points sP, Points eP, int sIndx, int eIndx)
+			{
+				startP = sP;
+				endP = eP;
+				startLSIndx = sIndx;
+				endLSIndx = eIndx;
+			}
+		}
+		
 		// ======================= CODE ======================= //
 		
 		public RoomTestAction() 
@@ -414,7 +442,7 @@ public class PhoenixDining extends Plugin
 				//JOptionPane.showMessageDialog(null, "****");
 				*/
 				// 12 ================================================ //
-				
+				/*
 				List<HomePieceOfFurniture> hpfList = home.getFurniture();
 				
 				HomePieceOfFurniture hpf = hpfList.get(hpfList.size() - 1);
@@ -423,6 +451,16 @@ public class PhoenixDining extends Plugin
 				boolean bIntersects = checkIntersectWithAllFurns(hpf);
 				
 				JOptionPane.showMessageDialog(null, bIntersects);
+				*/
+				// 13 ================================================ //
+				
+				Points centerP = new Points(0.0f, 0.0f);
+				putMarkers(centerP, 5);
+				
+				float radius = 600.0f;
+				float tolerance = 0.5f;
+				
+				calcStartArcPoints(centerP, radius, tolerance);
 				
 				// ================================================ //
 
@@ -432,6 +470,109 @@ public class PhoenixDining extends Plugin
 				JOptionPane.showMessageDialog(null," -x-x-x- EXCEPTION : " + e.getMessage()); 
 				//e.printStackTrace();
 			}
+		}
+		
+		public void calcStartArcPoints(Points center, float radius, float tolr)
+		{
+			float[][] diningPoints = diningRoom.getPoints();
+			
+			// List of Dining border line segments
+			List<LineSegement> lsList = new ArrayList<LineSegement>();
+			
+			for(int f = 0; f < diningPoints.length; f++)
+			{
+				Points startLS = new Points(diningPoints[f][0], diningPoints[f][1]);					
+				Points endLS = null;
+				
+				if(f == (diningPoints.length - 1))
+					endLS = new Points(diningPoints[0][0], diningPoints[0][1]);
+				else
+					endLS = new Points(diningPoints[f+1][0], diningPoints[f+1][1]);
+				
+				lsList.add(new LineSegement(startLS, endLS));				
+			}
+			
+			//List of intersection points with circle
+			List<ChordPoints> interPList = new ArrayList<ChordPoints>();
+			
+			for(int l = 0; l < lsList.size(); l++)
+			{
+				List<Points> interP = getIntersectionCircleLine(center, radius, lsList.get(l).startP, lsList.get(l).endP);
+				
+				for(Points p : interP)
+				{
+					boolean bInBetween = checkPointInBetween(p, lsList.get(l).startP, lsList.get(l).endP, tolr);
+					
+					if(bInBetween)
+					{
+						interPList.add(new ChordPoints(p, l));
+						//putMarkers(p, 3);
+					}
+				}
+			}
+			
+			// List of chords
+			List<ChordSegements> chordList = new ArrayList<ChordSegements>();
+			
+			for(int i = 0; i < interPList.size(); i++)
+			{
+				Points startC = interPList.get(i).p;
+				int sIndx = interPList.get(i).lsIndx;
+				
+				Points endC = null;
+				int eIndx = -1;
+				
+				if(i == (interPList.size() - 1))
+				{
+					endC = interPList.get(0).p;
+					eIndx = interPList.get(0).lsIndx;
+				}
+				else
+				{
+					endC = interPList.get(i+1).p;
+					eIndx = interPList.get(i+1).lsIndx;
+				}
+				
+				chordList.add(new ChordSegements(startC, endC, sIndx, eIndx));	
+				
+				//putMarkers(startC, 1);
+				//putMarkers(endC, 0);
+			}
+			
+			// Final Check	
+			List<LineSegement> finalList = new ArrayList<LineSegement>();
+			
+			for(int c = 0; c < chordList.size(); c++)
+			{
+				boolean bCollect = false;
+				ChordSegements cs = chordList.get(c);
+				
+				for(int l = 0; l < lsList.size(); l++)
+				{
+					if((l != cs.startLSIndx) && (l != cs.endLSIndx))
+					{
+						LineSegement ls = new LineSegement(cs.startP, cs.endP);
+						Points midP = new Points(((cs.startP.x + cs.endP.x)/2),((cs.startP.y + cs.endP.y)/2));
+						
+						Intersect inter = getIntersectPoint(ls, lsList.get(l));
+						
+						if((inter.dist == INFINITY_COORDS) && diningRoom.containsPoint(midP.x, midP.y, ROOM_TOLERANCE))
+						{
+							bCollect = true;
+						}
+						else
+							bCollect = false;
+					}
+				}
+				
+				if(bCollect)
+				{
+					finalList.add(new LineSegement(cs.startP, cs.endP));
+					putMarkers(cs.startP, 1);
+					putMarkers(cs.endP, 0);
+				}
+			}
+			
 		}
 		
 		public List<Points> calcAllFourFurnCoordinates(LineSegement ws, Points centerP, float dist) 
