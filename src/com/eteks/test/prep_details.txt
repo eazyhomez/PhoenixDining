@@ -1,0 +1,14 @@
+Prep:
+1. Circle-Line intersection
+2. Arc-LineSegment intersection
+3. Arc-Rectangle intersection
+4. Arc-Polygon intersection
+5. Free Arc segments
+6. Longest Free Arc segment
+7. Longest wall of Dining Area
+8. Place furniture PARALLEL to the wall - Modified (Given Point)
+9. Place furniture PERPENDICULAR to the wall - Modified (Given Point)
+10. Circle-Line(passing thru given Point) intersection 
+11. All 4 co-ordinates for placing furniture (1,2 - PARALLEL ; 3,4 - PERPENDICULAR)
+12. Intersection of current furniture with all furnitures in home
+13. Calculate available arc segments in Dining Area

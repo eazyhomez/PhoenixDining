@@ -131,34 +131,6 @@ public class PhoenixDining extends Plugin
 			}
 		}
 		
-		public class ChordPoints
-		{
-			Points p;
-			int lsIndx;
-			
-			public ChordPoints(Points inP, int inLSIndx)
-			{
-				p = inP;
-				lsIndx = inLSIndx;
-			}
-		}
-		
-		public class ChordSegements
-		{
-			Points startP;
-			Points endP;
-			int startLSIndx;
-			int endLSIndx;
-			
-			public ChordSegements(Points sP, Points eP, int sIndx, int eIndx)
-			{
-				startP = sP;
-				endP = eP;
-				startLSIndx = sIndx;
-				endLSIndx = eIndx;
-			}
-		}
-		
 		// ======================= CODE ======================= //
 		
 		public RoomTestAction() 
@@ -181,42 +153,36 @@ public class PhoenixDining extends Plugin
 				markBoxes = getMarkerBoxes();
 				
 				storeAllFurnRects(home);
-				storeAllWallRects(home);				
+				storeAllWallRects(home);
+				
 				getDiningRoom();
 				
-				long startTime = System.nanoTime();
-				
-				// ===================================================== //	
-
 				float DINING_ARC_RADIUS = 305.0f; // 10ft
 				
 				Points centerP = getStartingPoint();				
-				//putMarkers(centerP, 1);
+				putMarkers(centerP, 1);
 				
-				List<LineSegement> validArcs = calcStartArcPoints(centerP, DINING_ARC_RADIUS, tolerance);
+				// TODO : get starting arc points
+				//Points[] arcP = getStartingArcPoints(centerP, DINING_ARC_RADIUS);
 				
-				LineSegement freeWS = calcLongestFreeArcSeg(validArcs, centerP, DINING_ARC_RADIUS, tolerance);
-				//putMarkers(freeWS.startP, 3);
-				//putMarkers(freeWS.endP, 3);
+				Points arcP1 = new Points(-95.0f, 820.0f);
+				Points arcP2 = new Points(300.0f, 540.0f);
 				
-				JOptionPane.showMessageDialog(null, 1);
+				putMarkers(arcP1, 3);
+				putMarkers(arcP2, 3);
 				
-				float slope = ((freeWS.endP.y - freeWS.startP.y) / (freeWS.endP.x - freeWS.startP.x));
+				LineSegement freeWS = getLongestFreeArcSeg(centerP, arcP1, arcP2, DINING_ARC_RADIUS, tolerance);
+
+				float slope = ((freeWS.endP.y - freeWS.startP.y)/ (freeWS.endP.x - freeWS.startP.x));
 				float slopePerp = (-1 / slope);
 				
-				JOptionPane.showMessageDialog(null, 2);
-				
-				float intercept = centerP.y - (slopePerp * centerP.x);
-				
-				List<Points> interP = getIntersectionArcLineSeg2(centerP, DINING_ARC_RADIUS, slopePerp, intercept, freeWS.startP, freeWS.endP);
-				
-				JOptionPane.showMessageDialog(null, 3);
+				List<Points> interP = getIntersectionArcLineSeg2(centerP, DINING_ARC_RADIUS, slopePerp, centerP.y, freeWS.startP, freeWS.endP);
 				
 				if(interP.size() > 0)
 				{
 					initPoints = interP.get(0);
 					
-					//putMarkers(interP.get(0), 4);
+					putMarkers(interP.get(0), 4);
 					HomePieceOfFurniture newFurn = getFurnItem("DiningRect");
 					
 					LineSegement longWS = getLongestSideOfRoom(diningRoom);
@@ -237,8 +203,6 @@ public class PhoenixDining extends Plugin
 					
 					count++;
 					
-					JOptionPane.showMessageDialog(null, 4);
-					
 					HomePieceOfFurniture newFurn2 = newFurn.clone();
 					newFurn2.setName(newFurn.getName() + "_" + count); 
 					
@@ -250,9 +214,10 @@ public class PhoenixDining extends Plugin
 					
 					count++;
 					
-					float moveStep = DINING_PLACE_STEP;					
+					float moveStep = DINING_PLACE_STEP;
 					
-					while(!(bParaIntersects && bPerpIntersects))
+					
+					while (!(bParaIntersects && bPerpIntersects))
 					{						
 						if(moveStep > (3*DINING_PLACE_STEP))
 							break;
@@ -292,10 +257,6 @@ public class PhoenixDining extends Plugin
 				}
 				
 				// ================================================ //
-				
-				long endTime = System.nanoTime();
-				
-				JOptionPane.showMessageDialog(null, "Time : " + (endTime - startTime) + " ns");
 
 			}
 			catch(Exception e)
@@ -309,14 +270,14 @@ public class PhoenixDining extends Plugin
 		{
 			List<Points> retPList = new ArrayList<Points>();
 			
+			float intercept = centerP.y; 
+			
 			float slopePara = calcWallAngles(ws);		// Parallel
-			float intercept = centerP.y - (slopePara * centerP.x); 
 			
 			List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);
 			retPList.addAll(interPList1);
 			
 			float slopePerp = (-1.0f / slopePara);		// Perpendicular
-			intercept = centerP.y - (slopePerp * centerP.x); 
 			
 			List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
 			retPList.addAll(interPList2);
@@ -403,34 +364,6 @@ public class PhoenixDining extends Plugin
 			return longSeg;
 		}
 		
- 		public LineSegement calcLongestFreeArcSeg(List<LineSegement> lsList ,Points center, float rad, float tolerance)
- 		{
- 			LineSegement maxLS = null;
- 			float maxLength = 0.0f;
- 			
-			//JOptionPane.showMessageDialog(null, "lsList : " + lsList.size());
-				
- 			for(LineSegement ls : lsList)
- 			{ 				
- 				LineSegement longWS = getLongestFreeArcSeg(center, ls.startP, ls.endP, rad, tolerance);
- 				
- 				if(longWS != null)
- 				{
- 					float dist = calcDistance(longWS.startP, longWS.endP);
- 				
-					if(dist > maxLength)
-					{
-						maxLength = dist;
-						maxLS = ls;
-					}
-					
-					//JOptionPane.showMessageDialog(null, "-->>>" + maxLength);
-				}
- 			}
- 			
- 			return maxLS;
- 		}
- 		
 		public LineSegement getLongestFreeArcSeg(Points center, Points pArc1, Points pArc2, float rad, float tolerance)
 		{			
 			LineSegement maxLS = null;
@@ -447,8 +380,6 @@ public class PhoenixDining extends Plugin
 					maxLength = dist;
 					maxLS = ls;
 				}
-				
-				//JOptionPane.showMessageDialog(null, "-->" + dist);
 			}
 			
 			return maxLS;			
@@ -480,8 +411,6 @@ public class PhoenixDining extends Plugin
 			
 			boolean bCheckP1 = checkPointBlocked(pArc1);
 					
-			//JOptionPane.showMessageDialog(null, "bCheckP1 : " + bCheckP1 + ", " + checkPList.size());
-			
 			if(bCheckP1)
 			{
 				for(int x = 1; (x+1) < checkPList.size();)
@@ -677,131 +606,60 @@ public class PhoenixDining extends Plugin
 			return startPoints;
 		}
 		
-		public List<LineSegement> calcStartArcPoints(Points center, float radius, float tolr)
+		public Points[] getStartingArcPoints(Points centerP, float radius)
 		{
-			List<LineSegement> finalList = new ArrayList<LineSegement>();
+			Points[] arcPoints = new Points[2];
 			
-			float[][] diningPoints = diningRoom.getPoints();
-			
-			// List of Dining border line segments
-			List<LineSegement> lsList = new ArrayList<LineSegement>();
-			
-			for(int f = 0; f < diningPoints.length; f++)
-			{
-				Points startLS = new Points(diningPoints[f][0], diningPoints[f][1]);					
-				Points endLS = null;
+			for(Room r : home.getRooms())
+			{	
+				String roomName = (r.getName() != null) ? r.getName().trim() : "";
 				
-				if(f == (diningPoints.length - 1))
-					endLS = new Points(diningPoints[0][0], diningPoints[0][1]);
-				else
-					endLS = new Points(diningPoints[f+1][0], diningPoints[f+1][1]);
-				
-				lsList.add(new LineSegement(startLS, endLS));
-				//putMarkers(startLS, 5);
-				//putMarkers(endLS, 3);
-			}
-			
-			// List of intersection points with circle
-			List<ChordPoints> interPList = new ArrayList<ChordPoints>();
-			 
-			for(int l = 0; l < lsList.size(); l++)
-			{
-				List<Points> interP = getIntersectionCircleLine(center, radius, lsList.get(l).startP, lsList.get(l).endP);
-				
-				//JOptionPane.showMessageDialog(null, center.y + "," +  radius + "," +  lsList.get(l).startP.x + "," +  lsList.get(l).endP.x);
-				
-				for(Points p : interP)
+				if(!roomName.isEmpty() && roomName.equalsIgnoreCase("dining"))
 				{
-					boolean bInBetween = checkPointInBetween(p, lsList.get(l).startP, lsList.get(l).endP, tolr);
+					diningRoom = r;
 					
-					if(bInBetween)
+					float[][] roomRect = r.getPoints();
+					
+					if(roomRect.length > 1)
 					{
-						interPList.add(new ChordPoints(p, l));
-						//putMarkers(p, 5);
-					}
-				}
-			}
-			
-			// List of chords
-			List<ChordSegements> chordList = new ArrayList<ChordSegements>();
-			
-			if(interPList.size() == 2)
-			{
-				Points startC = interPList.get(0).p;
-				int sIndx = interPList.get(0).lsIndx;
-				
-				Points endC = interPList.get(1).p;;
-				int eIndx = interPList.get(1).lsIndx;
-				
-				chordList.add(new ChordSegements(startC, endC, sIndx, eIndx));
-				putMarkers(startC, 1);
-				putMarkers(endC, 0);
-			}
-			else
-			{
-				for(int i = 0; i < interPList.size(); i++)
-				{
-					Points startC = interPList.get(i).p;
-					int sIndx = interPList.get(i).lsIndx;
-					
-					Points endC = null;
-					int eIndx = -1;
-					
-					if(i == (interPList.size() - 1))
-					{
-						endC = interPList.get(0).p;
-						eIndx = interPList.get(0).lsIndx;
-					}
-					else
-					{
-						endC = interPList.get(i+1).p;
-						eIndx = interPList.get(i+1).lsIndx;
-					}
-					
-					chordList.add(new ChordSegements(startC, endC, sIndx, eIndx));	
-					
-					putMarkers(startC, 1);
-					putMarkers(endC, 0);
-				}
-			}
-			
-			// Final Check			
-			for(int c = 0; c < chordList.size(); c++)
-			{
-				boolean bCollect = false;
-				ChordSegements cs = chordList.get(c);
-				
-				for(int l = 0; l < lsList.size(); l++)
-				{
-					if((l != cs.startLSIndx) && (l != cs.endLSIndx))
-					{
-						LineSegement ls = new LineSegement(cs.startP, cs.endP);
-						Points midP = new Points(((cs.startP.x + cs.endP.x)/2),((cs.startP.y + cs.endP.y)/2));
+						Points startSP = new Points(roomRect[0][0], roomRect[0][1]);
+						Points endSP = new Points(roomRect[1][0], roomRect[1][1]);
 						
-						Intersect inter = getIntersectPoint(ls, lsList.get(l));
+						Points startEP = new Points(roomRect[roomRect.length - 1][0], roomRect[roomRect.length - 1][1]);
+						Points endEP = new Points(roomRect[0][0], roomRect[0][1]);
 						
-						JOptionPane.showMessageDialog(null, inter.p.x + "," + inter.p.y + " : " + inter.dist);
+						List<Points> interSPList = getIntersectionCircleLine(centerP, radius, startSP, endSP);
 						
-						if((inter.dist == INFINITY_COORDS) && diningRoom.containsPoint(midP.x, midP.y, ROOM_TOLERANCE))
+						for(Points p : interSPList)
 						{
-							bCollect = true;
+							JOptionPane.showMessageDialog(null, "p1 : " + p.x + ", " + p.y);
+							if(checkPointInBetween(p, startSP, endSP, tolerance))
+							{
+								arcPoints[0] = p;
+								break;
+							}
 						}
-						else
-							bCollect = false;
+
+						List<Points> interEPList = getIntersectionCircleLine(centerP, radius, startEP, endEP);
+						
+						for(Points p : interEPList)
+						{
+							JOptionPane.showMessageDialog(null, "p2 : " + p.x + ", " + p.y);
+							if(checkPointInBetween(p, startEP, endEP, tolerance))
+							{
+								arcPoints[1] = p;
+								break;
+							}
+						}
+						
+						JOptionPane.showMessageDialog(null, "debug");
 					}
-				}
-				
-				if(bCollect)
-				{
-					finalList.add(new LineSegement(cs.startP, cs.endP));
-					JOptionPane.showMessageDialog(null, cs.startP.x + "," + cs.startP.y + " | " + cs.endP.x + "," + cs.endP.y);
 					
-					putMarkers(cs.startP, 1);
-					putMarkers(cs.endP, 0);
+					break;
 				}
 			}
 			
-			return finalList;
+			return arcPoints;
 		}
 		
 		// ======================= UTILITY FUNCTIONS ======================= //
@@ -1217,8 +1075,6 @@ public class PhoenixDining extends Plugin
 			{
 				boolean bOnSameSide = checkPointOnSameSide(center, p, arcP1, arcP2);
 				
-				//JOptionPane.showMessageDialog(null, ">>--->>" + bOnSameSide);
-				
 				if(!bOnSameSide)
 					retList.add(p);
 			}		
@@ -1230,8 +1086,6 @@ public class PhoenixDining extends Plugin
 		{
 			List<Points> retList = new ArrayList<Points>();
 			
-			//JOptionPane.showMessageDialog(null, (center.x + "," + center.y + " ; " + rad + " ; " + slope + " ; " + intercept)); 
-			
 			List<Points> interList = getIntersectionCircleLine2(center, rad, slope, intercept);
 			
 			for(Points p : interList)
@@ -1240,8 +1094,6 @@ public class PhoenixDining extends Plugin
 				
 				boolean bOnSameSide = checkPointOnSameSide(center, p, arcP1, arcP2);
 				
-				//JOptionPane.showMessageDialog(null, ">>>" + bOnSameSide);
-						
 				if(!bOnSameSide)
 					retList.add(p);
 			}		
@@ -1255,7 +1107,7 @@ public class PhoenixDining extends Plugin
 			
 			try
 			{	
-				if(Math.abs(endL.x - startL.x) < ROOM_TOLERANCE)
+				if(endL.x == startL.x)
 				{
 					float dist = (float) Math.abs(startL.x - center.x);
 							
@@ -1263,8 +1115,6 @@ public class PhoenixDining extends Plugin
 					{
 						float x01 = startL.x;
 						float y01 = center.y - (float)Math.sqrt((rad*rad) - (dist*dist));
-						
-						//JOptionPane.showMessageDialog(null, (float)Math.sqrt((rad*rad) - (dist*dist)) + " , " + y01 + " / " + dist);
 						
 						Points inter1 = new Points(x01, y01);
 						interList.add(inter1);
@@ -1351,8 +1201,6 @@ public class PhoenixDining extends Plugin
 				float C = (center.y*center.y) - (rad*rad) + (center.x*center.x) - 2*(c*center.y) + (c*c);
 				
 				float D = (B*B) - 4*A*C;
-				
-				//JOptionPane.showMessageDialog(null," D : " + D); 
 				
 				if(D == 0)
 				{
