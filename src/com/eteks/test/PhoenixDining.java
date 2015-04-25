@@ -293,6 +293,7 @@ public class PhoenixDining extends Plugin
 				
 				float DINING_MOVE_STEP = 30.5f;
 				
+				int DINING_MOVE_MAX = 1; //3;
 				
 				boolean bAddAccessibility = true;
 				float accessWidth = 61.0f;	// 2ft.
@@ -300,7 +301,8 @@ public class PhoenixDining extends Plugin
 						
 				Accessibility accessBox = new Accessibility(bAddAccessibility, accessWidth, accessDepth);
 				
-				HomePieceOfFurniture newFurn = getFurnItem("diningrectchairs");
+				HomePieceOfFurniture newFurn = getFurnItem("diningrect");
+				HomePieceOfFurniture newFurnPlace = getFurnItem("diningrectchairs");
 				
 				Points centerP = getStartingPoint();
 				List<Points> initP = calcInitialPoints(centerP, DINING_RADIUS, tolerance);
@@ -315,12 +317,42 @@ public class PhoenixDining extends Plugin
 					HomePieceOfFurniture newFurn0 = newFurn.clone();
 					newFurn0.setName(newFurn.getName() + "_0");
 					
+					HomePieceOfFurniture newFurnPlace0 = newFurnPlace.clone();
+					newFurnPlace0.setName(newFurnPlace.getName() + "_0");
+					
 					LineSegement longWS = getLongestSideOfRoom(diningRoom);										
 
-					bSuccess = checkInitialPlacements(longWS, newFurn0, initPoints, accessBox);
+					bSuccess = checkInitialPlacements(longWS, newFurn0, newFurnPlace0, initPoints, accessBox);
 					
-					if(!bSuccess)
-						calcAllFourFurnCoordinates(longWS, initPoints, DINING_MOVE_STEP, tolerance);
+					// E. Move and incremental placement  ----------------------- //
+					
+					float loopCount = 0;
+					float moveCount = 0;
+					
+					while(!bSuccess)
+					{
+						loopCount++;
+						moveCount = (loopCount * DINING_MOVE_STEP);
+						
+						List<Points> moveP = calcAllFourFurnCoordinates(longWS, initPoints, moveCount, tolerance);
+						
+						for(int m = 0; m < moveP.size(); m++)
+						{
+							Points p = moveP.get(m);
+							putMarkers(p, 4);
+							
+							HomePieceOfFurniture newFurnM = newFurn.clone();
+							newFurnM.setName(newFurn.getName() + "_" + m + "_" + loopCount);
+						
+							HomePieceOfFurniture newFurnPlaceM = newFurnPlace.clone();
+							newFurnPlaceM.setName(newFurnPlace.getName() + "_0");
+							
+							bSuccess = checkNextPlacements(longWS, newFurnM, newFurnPlaceM, p, accessBox);							
+						}
+						
+						if(loopCount >= DINING_MOVE_MAX)
+							break;
+					}
 				}
 				
 				// ================================================ //
@@ -410,7 +442,7 @@ public class PhoenixDining extends Plugin
 				hpfNewRect = hpfN.getPoints();			
 
 			furnRectsAccess.add(hpfNewRect);
-			//putMarkerOnPolygon(hpfNewRect, 4);
+			//putMarkerOnPolygon(hpfNewRect, 3);
 			
 			boolean bIntersects = checkIntersectWithAllFurns(hpfN, accessBox.bAddAccess);			
 			boolean bIsInsideRoom = checkInsideRoom(room, hpfNewRect);
@@ -418,10 +450,16 @@ public class PhoenixDining extends Plugin
 			bSuccess = (!bIntersects) && bIsInsideRoom;
 			//JOptionPane.showMessageDialog(null, "intersects : " + bIntersects + ", inRoom : " + bIsInsideRoom + " -> " + bSuccess);
 			
+			int indx = furnIds.indexOf(hpfN.getName());
+			furnIds.remove(indx);
+			furnRects.remove(indx);
+			furnThicks.remove(indx);
+			furnRectsAccess.remove(indx);
+			
 			return bSuccess;
 		}
 		
-		public boolean checkInitialPlacements(LineSegement ws, HomePieceOfFurniture hpf, Points p, Accessibility accessBox)
+		public boolean checkInitialPlacements(LineSegement ws, HomePieceOfFurniture hpf, HomePieceOfFurniture hpfPlace, Points p, Accessibility accessBox)
 		{
 			boolean bSuccess = false;
 			
@@ -439,6 +477,12 @@ public class PhoenixDining extends Plugin
 			
 			if(bSuccessPara)
 			{
+				home.deletePieceOfFurniture(hpf0);
+				
+				HomePieceOfFurniture hpfPl0 = hpfPlace.clone();
+				hpfPl0.setName(hpfPlace.getName() + "_paraP");
+				placeFurnParallelToWall(ws, hpfPl0, initPoints);
+				
 				Design des1 = new Design(initPoints, 0.0f);
 				validDesignList.add(des1);
 				
@@ -452,7 +496,13 @@ public class PhoenixDining extends Plugin
 				//JOptionPane.showMessageDialog(null, "perp0 : " + bSuccessPerp);
 						
 				if(bSuccessPerp)
-				{					
+				{	
+					home.deletePieceOfFurniture(hpf1);
+					
+					HomePieceOfFurniture hpfPl1 = hpfPlace.clone();
+					hpfPl1.setName(hpfPlace.getName() + "_perpP");
+					placeFurnPerpendicularToWall(ws, hpfPl1, initPoints);
+					
 					Design des2 = new Design(initPoints, 0.0f);
 					validDesignList.add(des2);
 					
@@ -461,7 +511,7 @@ public class PhoenixDining extends Plugin
 				else
 				{
 					home.deletePieceOfFurniture(hpf1);
-					JOptionPane.showMessageDialog(null, " Not enough space !!!");
+					//JOptionPane.showMessageDialog(null, " Not enough space !!!");
 					
 					bSuccess = false;
 				}
@@ -469,7 +519,103 @@ public class PhoenixDining extends Plugin
 			else
 			{
 				home.deletePieceOfFurniture(hpf0);
-				JOptionPane.showMessageDialog(null, " Not enough space !!!");
+				//JOptionPane.showMessageDialog(null, " Not enough space !!!");
+				
+				HomePieceOfFurniture hpf2 = hpf.clone();
+				String hpf2Name = hpf2.getName() + "_perp";
+				hpf2.setName(hpf2Name);
+				
+				placeFurnPerpendicularToWall(ws, hpf2, initPoints);
+				bSuccessPerp = checkPlacement(hpf2, accessBox);
+				
+				//JOptionPane.showMessageDialog(null, "perp1 : " + bSuccessPerp);
+				
+				if(bSuccessPerp)
+				{
+					home.deletePieceOfFurniture(hpf2);
+					
+					HomePieceOfFurniture hpfPl2 = hpfPlace.clone();
+					hpfPl2.setName(hpfPlace.getName() + "_perpP");
+					placeFurnPerpendicularToWall(ws, hpfPl2, initPoints);
+					
+					Design des1 = new Design(p, 0.0f);
+					validDesignList.add(des1);
+					
+					bSuccess = true; 
+				}
+				else
+				{
+					home.deletePieceOfFurniture(hpf2);
+					//JOptionPane.showMessageDialog(null, " Not enough space !!!");
+					
+					bSuccess = false;
+				}
+			}
+			
+			return bSuccess;
+		}
+		
+		public boolean checkNextPlacements(LineSegement ws, HomePieceOfFurniture hpf, HomePieceOfFurniture hpfPlace, Points p, Accessibility accessBox)
+		{
+			boolean bSuccess = false;
+			
+			boolean bSuccessPara = false;
+			boolean bSuccessPerp = false;
+			
+			HomePieceOfFurniture hpf0 = hpf.clone();			
+			String hpf0Name = hpf0.getName() + "_para";
+			hpf0.setName(hpf0Name);
+			
+			placeFurnParallelToWall(ws, hpf0, p);		// initial placement
+			
+			bSuccessPara = checkPlacement(hpf0, accessBox);
+			//JOptionPane.showMessageDialog(null, "para0 : " + bSuccessPara);
+			
+			if(bSuccessPara)
+			{
+				home.deletePieceOfFurniture(hpf0);
+				
+				HomePieceOfFurniture hpfPl0 = hpfPlace.clone();
+				hpfPl0.setName(hpfPlace.getName() + "_paraP");
+				placeFurnParallelToWall(ws, hpfPl0, p);
+				
+				Design des1 = new Design(p, 0.0f);
+				validDesignList.add(des1);
+				
+				HomePieceOfFurniture hpf1 = hpf.clone();
+				String hpf1Name = hpf1.getName() + "_perp";
+				hpf1.setName(hpf1Name);
+				
+				placeFurnPerpendicularToWall(ws, hpf1, p);
+				bSuccessPerp = checkPlacement(hpf1, accessBox);
+				
+				//JOptionPane.showMessageDialog(null, "perp0 : " + bSuccessPerp);
+						
+				if(bSuccessPerp)
+				{	
+					home.deletePieceOfFurniture(hpf1);
+					
+					HomePieceOfFurniture hpfPl1 = hpfPlace.clone();
+					hpfPl1.setName(hpfPlace.getName() + "_perpP");
+					placeFurnPerpendicularToWall(ws, hpfPl1, p);
+					
+					Design des2 = new Design(p, 0.0f);
+					validDesignList.add(des2);
+					
+					bSuccess = true;
+				}
+				else
+				{
+					home.deletePieceOfFurniture(hpf1);
+					//JOptionPane.showMessageDialog(null, " Not enough space !!!");
+					
+					bSuccess = false;
+				}
+			}
+			else
+			{
+				home.deletePieceOfFurniture(hpf0);
+				//JOptionPane.showMessageDialog(null, " Not enough space !!!");
 				
 				HomePieceOfFurniture hpf2 = hpf.clone();
 				String hpf2Name = hpf2.getName() + "_perp";
@@ -482,7 +628,13 @@ public class PhoenixDining extends Plugin
 				
 				if(bSuccessPerp)
 				{
-					Design des1 = new Design(initPoints, 0.0f);
+					home.deletePieceOfFurniture(hpf2);
+					
+					HomePieceOfFurniture hpfPl2 = hpfPlace.clone();
+					hpfPl2.setName(hpfPlace.getName() + "_perpP");
+					placeFurnPerpendicularToWall(ws, hpfPl2, p);
+					
+					Design des1 = new Design(p, 0.0f);
 					validDesignList.add(des1);
 					
 					bSuccess = true; 
@@ -490,7 +642,7 @@ public class PhoenixDining extends Plugin
 				else
 				{
 					home.deletePieceOfFurniture(hpf2);
-					JOptionPane.showMessageDialog(null, " Not enough space !!!");
+					//JOptionPane.showMessageDialog(null, " Not enough space !!!");
 					
 					bSuccess = false;
 				}
@@ -530,43 +682,7 @@ public class PhoenixDining extends Plugin
 		}
 		
 		// -x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x //
-		
-		/*
-		public List<Points> calcAllFourFurnCoordinates(LineSegement ws, Points centerP, float dist) 
-		{
-			List<Points> retPList = new ArrayList<Points>();
-			
-			//putMarkers(ws.startP, 1);
-			//putMarkers(ws.endP, 1);
-			
-			float slopePara = calcWallAngles(ws);						// Parallel			
-			float intercept = centerP.y - (slopePara * centerP.x); 
-			
-			//JOptionPane.showMessageDialog(null, slopePara + "/ interceptPara : " + intercept);
-			
-			List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);
-			retPList.addAll(interPList1);
-			
-			float slopePerp = (-1.0f / slopePara);						// Perpendicular
-			intercept = centerP.y - (slopePerp * centerP.x);
-			
-			//JOptionPane.showMessageDialog(null, slopePerp + "/ interceptPerp : " + intercept);
-			
-			List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
-			retPList.addAll(interPList2);
-			
-			if(bShowMarker)
-			{
-				for(Points p : retPList)
-				{
-					putMarkers(p, 1);
-				}
-			}
-			
-			return retPList;
-		}
-		*/
-		
+				
 		public List<Points> calcAllFourFurnCoordinates(LineSegement ws, Points centerP, float dist, float tolr) 
 		{
 			List<Points> retPList = new ArrayList<Points>();
@@ -576,54 +692,189 @@ public class PhoenixDining extends Plugin
 			//putMarkers(ws.startP, 1);
 			//putMarkers(ws.endP, 1);
 			
-			// Parallel
-			if(Math.abs(ws.endP.x - ws.startP.x) < tolr)
-			{
-				Points p1 = new Points((centerP.x + dist), centerP.y);
-				Points p2 = new Points((centerP.x - dist), centerP.y);
-				
-				List<Points> interPList1 = new ArrayList<Points>();
-				interPList1.add(p1);
-				interPList1.add(p2);
-				
-				List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
-				retPList.addAll(sortedPList1);
-			}
-			else
-			{
-				float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
-				float intercept = centerP.y - (slopePara * centerP.x);
-				
-				List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);				
-				List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
-				
-				retPList.addAll(sortedPList1);
-			}			
-			//JOptionPane.showMessageDialog(null, slopePara + "/ interceptPara : " + intercept);
+			float xLimit = Math.abs(ws.endP.x - ws.startP.x);
+			float yLimit = Math.abs(ws.endP.y - ws.startP.y);
 			
-			// Perpendicular
-			if(Math.abs(ws.endP.y - ws.startP.y) < tolr)
+			if(yLimit < tolr)
 			{
-				Points p1 = new Points(centerP.x, (centerP.y + dist));
-				Points p2 = new Points(centerP.x, (centerP.y - dist));
+				// Perpendicular - towards longest wall
+				if(yLimit < tolr)
+				{
+					Points p1 = new Points(centerP.x, (centerP.y + dist));
+					Points p2 = new Points(centerP.x, (centerP.y - dist));
+					
+					JOptionPane.showMessageDialog(null, "1_ p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					
+					List<Points> interPList2 = new ArrayList<Points>();
+					interPList2.add(p1);
+					interPList2.add(p2);
+					
+					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
+					retPList.addAll(sortedPList2);
+				}
+				else if(yLimit >= tolr)
+				{
+					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+					float slopePerp = (-1.0f / slopePara);
+					float intercept = centerP.y - (slopePerp * centerP.x);
+					
+					JOptionPane.showMessageDialog(null, "1_ slopePara : " + slopePara + ",\nslopePerp : " + slopePerp);
+					
+					List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
+					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
+					
+					retPList.addAll(sortedPList2);
+				}			
+				//JOptionPane.showMessageDialog(null, slopePerp + "/ interceptPerp : " + intercept);
 				
-				List<Points> interPList2 = new ArrayList<Points>();
-				interPList2.add(p1);
-				interPList2.add(p2);
+				// Parallel - to longest wall
+				if(xLimit < tolr)
+				{
+					Points p1 = new Points((centerP.x + dist), centerP.y);
+					Points p2 = new Points((centerP.x - dist), centerP.y);
+					
+					JOptionPane.showMessageDialog(null, "1|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+							
+					List<Points> interPList1 = new ArrayList<Points>();
+					interPList1.add(p1);
+					interPList1.add(p2);
+					
+					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+					retPList.addAll(sortedPList1);
+				}
+				else if(xLimit >= tolr)
+				{
+					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+					float intercept = centerP.y - (slopePara * centerP.x);
+					
+					List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);				
+					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+					
+					retPList.addAll(sortedPList1);
+				}			
+				//JOptionPane.showMessageDialog(null, slopePara + "/ interceptPara : " + intercept);
+			}
+			else if(xLimit < tolr)
+			{
+				// Perpendicular - towards longest wall
+				if(xLimit < tolr)
+				{
+					Points p1 = new Points((centerP.x + dist), centerP.y);
+					Points p2 = new Points((centerP.x - dist), centerP.y);
+					
+					JOptionPane.showMessageDialog(null, "2_ p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+							
+					List<Points> interPList1 = new ArrayList<Points>();
+					interPList1.add(p1);
+					interPList1.add(p2);
+					
+					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+					retPList.addAll(sortedPList1);
+				}
+				else if(xLimit >= tolr)
+				{
+					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+					float slopePerp = (-1.0f / slopePara);
+					float intercept = centerP.y - (slopePerp * centerP.x);
+					
+					JOptionPane.showMessageDialog(null, "2_ slopePara : " + slopePara + ",\nslopePerp : " + slopePerp);
+					
+					List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);				
+					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+					
+					retPList.addAll(sortedPList1);
+				}			
+				//JOptionPane.showMessageDialog(null, slopePerp + "/ interceptPerp : " + intercept);
 				
-				List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
-				retPList.addAll(sortedPList2);
+				// Parallel - to longest wall
+				if(yLimit < tolr)
+				{
+					Points p1 = new Points(centerP.x, (centerP.y + dist));
+					Points p2 = new Points(centerP.x, (centerP.y - dist));
+					
+					JOptionPane.showMessageDialog(null, "2|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					
+					List<Points> interPList2 = new ArrayList<Points>();
+					interPList2.add(p1);
+					interPList2.add(p2);
+					
+					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
+					retPList.addAll(sortedPList2);
+				}
+				else if(yLimit >= tolr)
+				{					
+					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+					float intercept = centerP.y - (slopePara * centerP.x);
+					
+					JOptionPane.showMessageDialog(null, "2|| slopePara : " + slopePara + ",\n");
+					
+					List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);
+					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
+					
+					retPList.addAll(sortedPList2);
+				}			
+				//JOptionPane.showMessageDialog(null, slopePara + "/ interceptPara : " + intercept);
+				
 			}
 			else
 			{
-				float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
-				float slopePerp = (-1.0f / slopePara);
-				float intercept = centerP.y - (slopePerp * centerP.x);
+				// Perpendicular - towards longest wall
+				if(yLimit < tolr)
+				{
+					Points p1 = new Points(centerP.x, (centerP.y + dist));
+					Points p2 = new Points(centerP.x, (centerP.y - dist));
+					
+					JOptionPane.showMessageDialog(null, "3_ p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					
+					List<Points> interPList2 = new ArrayList<Points>();
+					interPList2.add(p1);
+					interPList2.add(p2);
+					
+					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
+					retPList.addAll(sortedPList2);
+				}
+				else if(yLimit >= tolr)
+				{
+					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+					float slopePerp = (-1.0f / slopePara);
+					float intercept = centerP.y - (slopePerp * centerP.x);
+					
+					JOptionPane.showMessageDialog(null, "3_ slopePara : " + slopePara + ",\nslopePerp : " + slopePerp);
+					
+					List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
+					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
+					
+					retPList.addAll(sortedPList2);
+				}			
+				//JOptionPane.showMessageDialog(null, slopePerp + "/ interceptPerp : " + intercept);
 				
-				List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
-				retPList.addAll(interPList2);
-			}			
-			//JOptionPane.showMessageDialog(null, slopePerp + "/ interceptPerp : " + intercept);
+				// Parallel - to longest wall
+				if(xLimit < tolr)
+				{
+					Points p1 = new Points((centerP.x + dist), centerP.y);
+					Points p2 = new Points((centerP.x - dist), centerP.y);
+					
+					JOptionPane.showMessageDialog(null, "3|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+							
+					List<Points> interPList1 = new ArrayList<Points>();
+					interPList1.add(p1);
+					interPList1.add(p2);
+					
+					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+					retPList.addAll(sortedPList1);
+				}
+				else if(xLimit >= tolr)
+				{
+					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+					float intercept = centerP.y - (slopePara * centerP.x);
+					
+					List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);				
+					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+					
+					retPList.addAll(sortedPList1);
+				}			
+				//JOptionPane.showMessageDialog(null, slopePara + "/ interceptPara : " + intercept);
+			}
 			
 			if(bShowMarker)
 			{
@@ -633,6 +884,7 @@ public class PhoenixDining extends Plugin
 				}
 			}
 			
+			JOptionPane.showMessageDialog(null, retPList.size());
 			return retPList;
 		}
 		
