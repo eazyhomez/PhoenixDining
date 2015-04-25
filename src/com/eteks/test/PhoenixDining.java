@@ -288,6 +288,9 @@ public class PhoenixDining extends Plugin
 				// B. Check initial placements -------------------------------- //
 				float DINING_RADIUS = 365.0f;  // 12 ft  //282.0f;  // 9.25 ft (MED RANGE : 8.5ft - 10ft)
 				
+				float DINING_MOVE_STEP = 30.5f;
+				
+				
 				boolean bAddAccessibility = true;
 				float accessWidth = 61.0f;	// 2ft.
 				float accessDepth = 61.0f;	// 2ft.
@@ -312,6 +315,9 @@ public class PhoenixDining extends Plugin
 					LineSegement longWS = getLongestSideOfRoom(diningRoom);										
 
 					bSuccess = checkInitialPlacements(longWS, newFurn0, initPoints, accessBox);
+					
+					if(!bSuccess)
+						calcAllFourFurnCoordinates(longWS, initPoints, DINING_MOVE_STEP, tolerance);
 				}
 				
 				// ================================================ //
@@ -401,7 +407,7 @@ public class PhoenixDining extends Plugin
 				hpfNewRect = hpfN.getPoints();			
 
 			furnRectsAccess.add(hpfNewRect);
-			putMarkerOnPolygon(hpfNewRect, 4);
+			//putMarkerOnPolygon(hpfNewRect, 4);
 			
 			boolean bIntersects = checkIntersectWithAllFurns(hpfN, accessBox.bAddAccess);			
 			boolean bIsInsideRoom = checkInsideRoom(room, hpfNewRect);
@@ -499,8 +505,8 @@ public class PhoenixDining extends Plugin
 			
 			if(freeWS != null)
 			{
-				//putMarkers(freeWS.startP, 1);
-				//putMarkers(freeWS.endP, 2);
+				//putMarkers(freeWS.startP, 3);
+				//putMarkers(freeWS.endP, 0);
 				
 				float slope = ((freeWS.endP.y - freeWS.startP.y) / (freeWS.endP.x - freeWS.startP.x));
 				float slopePerp = (-1 / slope);
@@ -522,13 +528,18 @@ public class PhoenixDining extends Plugin
 		
 		// -x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x //
 		
-		
+		/*
 		public List<Points> calcAllFourFurnCoordinates(LineSegement ws, Points centerP, float dist) 
 		{
 			List<Points> retPList = new ArrayList<Points>();
 			
+			//putMarkers(ws.startP, 1);
+			//putMarkers(ws.endP, 1);
+			
 			float slopePara = calcWallAngles(ws);						// Parallel			
 			float intercept = centerP.y - (slopePara * centerP.x); 
+			
+			//JOptionPane.showMessageDialog(null, slopePara + "/ interceptPara : " + intercept);
 			
 			List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);
 			retPList.addAll(interPList1);
@@ -536,8 +547,80 @@ public class PhoenixDining extends Plugin
 			float slopePerp = (-1.0f / slopePara);						// Perpendicular
 			intercept = centerP.y - (slopePerp * centerP.x);
 			
+			//JOptionPane.showMessageDialog(null, slopePerp + "/ interceptPerp : " + intercept);
+			
 			List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
 			retPList.addAll(interPList2);
+			
+			if(bShowMarker)
+			{
+				for(Points p : retPList)
+				{
+					putMarkers(p, 1);
+				}
+			}
+			
+			return retPList;
+		}
+		*/
+		
+		public List<Points> calcAllFourFurnCoordinates(LineSegement ws, Points centerP, float dist, float tolr) 
+		{
+			List<Points> retPList = new ArrayList<Points>();
+			
+			Points wsMidP = new Points(((ws.startP.x + ws.endP.x)/2),(ws.startP.y + ws.endP.y)/2);
+			
+			//putMarkers(ws.startP, 1);
+			//putMarkers(ws.endP, 1);
+			
+			// Parallel
+			if(Math.abs(ws.endP.x - ws.startP.x) < tolr)
+			{
+				Points p1 = new Points((centerP.x + dist), centerP.y);
+				Points p2 = new Points((centerP.x - dist), centerP.y);
+				
+				List<Points> interPList1 = new ArrayList<Points>();
+				interPList1.add(p1);
+				interPList1.add(p2);
+				
+				List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+				retPList.addAll(sortedPList1);
+			}
+			else
+			{
+				float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+				float intercept = centerP.y - (slopePara * centerP.x);
+				
+				List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);				
+				List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
+				
+				retPList.addAll(sortedPList1);
+			}			
+			//JOptionPane.showMessageDialog(null, slopePara + "/ interceptPara : " + intercept);
+			
+			// Perpendicular
+			if(Math.abs(ws.endP.y - ws.startP.y) < tolr)
+			{
+				Points p1 = new Points(centerP.x, (centerP.y + dist));
+				Points p2 = new Points(centerP.x, (centerP.y - dist));
+				
+				List<Points> interPList2 = new ArrayList<Points>();
+				interPList2.add(p1);
+				interPList2.add(p2);
+				
+				List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
+				retPList.addAll(sortedPList2);
+			}
+			else
+			{
+				float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
+				float slopePerp = (-1.0f / slopePara);
+				float intercept = centerP.y - (slopePerp * centerP.x);
+				
+				List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
+				retPList.addAll(interPList2);
+			}			
+			//JOptionPane.showMessageDialog(null, slopePerp + "/ interceptPerp : " + intercept);
 			
 			if(bShowMarker)
 			{
@@ -647,10 +730,10 @@ public class PhoenixDining extends Plugin
 					if(dist > maxLength)
 					{
 						maxLength = dist;
-						maxLS = ls;
+						maxLS = longWS;
 					}
 					
-					//JOptionPane.showMessageDialog(null, "-->>>" + maxLength);
+					//JOptionPane.showMessageDialog(null, "-->>>" + maxLength + "/ " + longWS.startP + ", " + longWS.endP);
 				}
  			}
  			
@@ -688,7 +771,7 @@ public class PhoenixDining extends Plugin
 			{	
 				for(Points p : interPList)
 				{
-					putMarkers(p, 3);
+					//putMarkers(p, 3);
 				}
 			}
 						
@@ -703,6 +786,9 @@ public class PhoenixDining extends Plugin
 			checkPList.add(pArc2);		
 			
 			boolean bCheckP1 = checkPointBlocked(pArc1);
+			
+			//JOptionPane.showMessageDialog(null, interPList.size() + " : " + bCheckP1);
+			
 					
 			if(bCheckP1)
 			{
@@ -712,7 +798,7 @@ public class PhoenixDining extends Plugin
 					freeAS.parent = center;
 					arcSegList.add(freeAS);
 											
-					//putMarkers(checkPList.get(x), 3);
+					//putMarkers(checkPList.get(x), 4);
 					//putMarkers(checkPList.get(x+1), 1);
 					
 					x += 2;
@@ -726,7 +812,7 @@ public class PhoenixDining extends Plugin
 					freeAS.parent = center;
 					arcSegList.add(freeAS);
 					
-					//putMarkers(checkPList.get(x), 2);
+					//putMarkers(checkPList.get(x), 3);
 					//putMarkers(checkPList.get(x+1), 1);
 					
 					x += 2;
@@ -1624,7 +1710,7 @@ public class PhoenixDining extends Plugin
 				float m = slope;
 				float c = intercept;
 				
-				// (m^2+1)x^2 + 2(mc−mq−p)x + (q^2−r^2+p^2−2cq+c^2) = 0			
+				// (m^2+1)x^2 + 2(mca��mq−p)x + (q^2−r^2+p^2−2cq+c^2) = 0			
 				
 				float A = (m*m) + 1;
 				float B = 2*((m*c) - (m*center.y) - center.x);
