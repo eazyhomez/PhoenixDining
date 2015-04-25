@@ -417,7 +417,10 @@ public class PhoenixDining extends Plugin
 			boolean bSuccessPara = false;
 			boolean bSuccessPerp = false;
 			
-			HomePieceOfFurniture hpf0 = hpf.clone();
+			HomePieceOfFurniture hpf0 = hpf.clone();			
+			String hpf0Name = hpf0.getName() + "_para";
+			hpf0.setName(hpf0Name);
+			
 			placeFurnParallelToWall(ws, hpf0, initPoints);		// initial placement
 			
 			bSuccessPara = checkPlacement(hpf0, accessBox);
@@ -429,6 +432,9 @@ public class PhoenixDining extends Plugin
 				validDesignList.add(des1);
 				
 				HomePieceOfFurniture hpf1 = hpf.clone();
+				String hpf1Name = hpf1.getName() + "_perp";
+				hpf1.setName(hpf1Name);
+				
 				placeFurnPerpendicularToWall(ws, hpf1, p);
 				bSuccessPerp = checkPlacement(hpf1, accessBox);
 				
@@ -455,6 +461,8 @@ public class PhoenixDining extends Plugin
 				JOptionPane.showMessageDialog(null, " Not enough space !!!");
 				
 				HomePieceOfFurniture hpf2 = hpf.clone();
+				String hpf2Name = hpf2.getName() + "_perp";
+				hpf2.setName(hpf2Name);
 				
 				placeFurnPerpendicularToWall(ws, hpf2, p);
 				bSuccessPerp = checkPlacement(hpf2, accessBox);

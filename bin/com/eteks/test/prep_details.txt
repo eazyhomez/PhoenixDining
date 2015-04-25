@@ -6,3 +6,5 @@ Prep 2:
 4. Generate free arc segements
 
 A. Check intersection with all furnitures/fixtures/innerwalls
+B.  i.  Check initial placements of "DiningRectChairs" with accessibility (fixed DINING_RADIUS)
+	ii. Unique name for all placements of "DiningRectChairs" with accessibility
