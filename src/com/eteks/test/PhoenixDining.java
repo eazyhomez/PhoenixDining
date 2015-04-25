@@ -55,7 +55,7 @@ public class PhoenixDining extends Plugin
 		
 		public float tolerance = 0.5f; 					// 5 mm
 		
-		public boolean bShowMarker = false;
+		public boolean bShowMarker = true;
 		
 		public Points initPoints = null;
 		
@@ -285,7 +285,7 @@ public class PhoenixDining extends Plugin
 				checkPlacement(hpfNew, accessBox);
 				*/
 				
-				// Check initial placements -------------------------------- //
+				// B. Check initial placements -------------------------------- //
 				float DINING_RADIUS = 365.0f;  // 12 ft  //282.0f;  // 9.25 ft (MED RANGE : 8.5ft - 10ft)
 				
 				boolean bAddAccessibility = true;
@@ -370,6 +370,7 @@ public class PhoenixDining extends Plugin
 				}
 			}
 			
+			/*
 			if(bShowMarker)
 			{
 				for(Points p : finalPList)
@@ -377,6 +378,7 @@ public class PhoenixDining extends Plugin
 					putMarkers(p, 3);
 				}
 			}
+			*/
 			
 			return finalPList;
 		}
@@ -525,17 +527,25 @@ public class PhoenixDining extends Plugin
 		{
 			List<Points> retPList = new ArrayList<Points>();
 			
-			float intercept = centerP.y; 
-			
-			float slopePara = calcWallAngles(ws);						// Parallel
+			float slopePara = calcWallAngles(ws);						// Parallel			
+			float intercept = centerP.y - (slopePara * centerP.x); 
 			
 			List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);
 			retPList.addAll(interPList1);
 			
-			float slopePerp = (-1.0f / slopePara);		// Perpendicular
+			float slopePerp = (-1.0f / slopePara);						// Perpendicular
+			intercept = centerP.y - (slopePerp * centerP.x);
 			
 			List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
 			retPList.addAll(interPList2);
+			
+			if(bShowMarker)
+			{
+				for(Points p : retPList)
+				{
+					putMarkers(p, 1);
+				}
+			}
 			
 			return retPList;
 		}
