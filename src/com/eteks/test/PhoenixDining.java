@@ -247,7 +247,7 @@ public class PhoenixDining extends Plugin
 				generateFreeArcSegs(centerP, pArc1, pArc2, radius, tolerance);
 				*/
 				
-				// Intersection with All furns -------------------------------- //
+				// A. Intersection with All furns -------------------------------- //
 				HomePieceOfFurniture hpf = getFurnItem("diningrectchairs");
 
 				boolean bAddAccessibility = true;
