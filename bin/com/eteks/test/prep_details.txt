@@ -3,3 +3,6 @@ Prep 2:
 1. Create Accessibility Box
 2. Intersection of Arc and Line (previous)
 3. Intersection of Circle and Polygon (using intersection of Circle and Line Segment)
+4. Generate free arc segements
+
+A. Check intersection with all furnitures/fixtures/innerwalls

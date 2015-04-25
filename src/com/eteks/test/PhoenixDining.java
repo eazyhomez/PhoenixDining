@@ -55,11 +55,11 @@ public class PhoenixDining extends Plugin
 		
 		public float tolerance = 0.5f; 					// 5 mm
 		
-		public boolean bShowMarker = true;
+		public boolean bShowMarker = false;
 		
 		public Points initPoints = null;
 		
-		String refFurnId = "";
+		public List<Design> validDesignList = new ArrayList<Design>();
 		
 		
 		// ======================= CLASSES ======================= //
@@ -175,6 +175,20 @@ public class PhoenixDining extends Plugin
 				accessDepth = accD;
 			}
 		}
+		
+		public class Design
+		{
+			Points p;
+			float orient;
+
+			public Design(Points inP , float inOrient)
+			{
+				p = inP;
+				orient = inOrient;
+			}
+		}
+		
+		
 		// ======================= CODE ======================= //
 		
 		public RoomTestAction() 
@@ -199,6 +213,11 @@ public class PhoenixDining extends Plugin
 				storeAllWallRects(home);
 				
 				getDiningRoom();
+				
+				
+				long startTime = System.nanoTime();
+				
+				// ===================================================== //	
 				
 				// 1. -------------------------------- //
 				/*
@@ -248,6 +267,7 @@ public class PhoenixDining extends Plugin
 				*/
 				
 				// A. Intersection with All furns -------------------------------- //
+				/*
 				HomePieceOfFurniture hpf = getFurnItem("diningrectchairs");
 
 				boolean bAddAccessibility = true;
@@ -263,7 +283,43 @@ public class PhoenixDining extends Plugin
 				//placeFurnPerpendicularToWall(ws, hpfNew, furnCoords);
 				
 				checkPlacement(hpfNew, accessBox);
-			
+				*/
+				
+				// Check initial placements -------------------------------- //
+				float DINING_RADIUS = 365.0f;  // 12 ft  //282.0f;  // 9.25 ft (MED RANGE : 8.5ft - 10ft)
+				
+				boolean bAddAccessibility = true;
+				float accessWidth = 61.0f;	// 2ft.
+				float accessDepth = 61.0f;	// 2ft.
+						
+				Accessibility accessBox = new Accessibility(bAddAccessibility, accessWidth, accessDepth);
+				
+				HomePieceOfFurniture newFurn = getFurnItem("diningrectchairs");
+				
+				Points centerP = getStartingPoint();
+				List<Points> initP = calcInitialPoints(centerP, DINING_RADIUS, tolerance);
+				
+				boolean bSuccess = false;
+						
+				if(initP.size() > 0)
+				{
+					initPoints = initP.get(0);
+					putMarkers(initPoints, 5);					
+					
+					HomePieceOfFurniture newFurn0 = newFurn.clone();
+					newFurn0.setName(newFurn.getName() + "_0");
+					
+					LineSegement longWS = getLongestSideOfRoom(diningRoom);										
+
+					bSuccess = checkInitialPlacements(longWS, newFurn0, initPoints, accessBox);
+				}
+				
+				// ================================================ //
+				
+				long endTime = System.nanoTime();
+				
+				JOptionPane.showMessageDialog(null, "Time : " + (endTime - startTime) + " ns \n " + bSuccess);
+				
 			}
 			catch(Exception e)
 			{
@@ -349,11 +405,110 @@ public class PhoenixDining extends Plugin
 			boolean bIsInsideRoom = checkInsideRoom(room, hpfNewRect);
 		
 			bSuccess = (!bIntersects) && bIsInsideRoom;
-			JOptionPane.showMessageDialog(null, "intersects : " + bIntersects + ", inRoom : " + bIsInsideRoom + " -> " + bSuccess);
+			//JOptionPane.showMessageDialog(null, "intersects : " + bIntersects + ", inRoom : " + bIsInsideRoom + " -> " + bSuccess);
 			
 			return bSuccess;
 		}
 		
+		public boolean checkInitialPlacements(LineSegement ws, HomePieceOfFurniture hpf, Points p, Accessibility accessBox)
+		{
+			boolean bSuccess = false;
+			
+			boolean bSuccessPara = false;
+			boolean bSuccessPerp = false;
+			
+			HomePieceOfFurniture hpf0 = hpf.clone();
+			placeFurnParallelToWall(ws, hpf0, initPoints);		// initial placement
+			
+			bSuccessPara = checkPlacement(hpf0, accessBox);
+			//JOptionPane.showMessageDialog(null, "para0 : " + bSuccessPara);
+			
+			if(bSuccessPara)
+			{
+				Design des1 = new Design(initPoints, 0.0f);
+				validDesignList.add(des1);
+				
+				HomePieceOfFurniture hpf1 = hpf.clone();
+				placeFurnPerpendicularToWall(ws, hpf1, p);
+				bSuccessPerp = checkPlacement(hpf1, accessBox);
+				
+				//JOptionPane.showMessageDialog(null, "perp0 : " + bSuccessPerp);
+						
+				if(bSuccessPerp)
+				{					
+					Design des2 = new Design(initPoints, 0.0f);
+					validDesignList.add(des2);
+					
+					bSuccess = true;
+				}
+				else
+				{
+					home.deletePieceOfFurniture(hpf1);
+					JOptionPane.showMessageDialog(null, " Not enough space !!!");
+					
+					bSuccess = false;
+				}
+			}
+			else
+			{
+				home.deletePieceOfFurniture(hpf0);
+				JOptionPane.showMessageDialog(null, " Not enough space !!!");
+				
+				HomePieceOfFurniture hpf2 = hpf.clone();
+				
+				placeFurnPerpendicularToWall(ws, hpf2, p);
+				bSuccessPerp = checkPlacement(hpf2, accessBox);
+				
+				//JOptionPane.showMessageDialog(null, "perp1 : " + bSuccessPerp);
+				
+				if(bSuccessPerp)
+				{
+					Design des1 = new Design(initPoints, 0.0f);
+					validDesignList.add(des1);
+					
+					bSuccess = true; 
+				}
+				else
+				{
+					home.deletePieceOfFurniture(hpf2);
+					JOptionPane.showMessageDialog(null, " Not enough space !!!");
+					
+					bSuccess = false;
+				}
+			}
+			
+			return bSuccess;
+		}
+		
+		public List<Points> calcInitialPoints(Points center, float rad, float tolr)
+		{
+			List<Points> arcPoints = new ArrayList<Points>();
+			List<LineSegement> validArcs = calcStartArcPoints(center, rad, tolr);
+			 
+			LineSegement freeWS = calcLongestFreeArcSeg(validArcs, center, rad, tolr);
+			
+			if(freeWS != null)
+			{
+				//putMarkers(freeWS.startP, 1);
+				//putMarkers(freeWS.endP, 2);
+				
+				float slope = ((freeWS.endP.y - freeWS.startP.y) / (freeWS.endP.x - freeWS.startP.x));
+				float slopePerp = (-1 / slope);
+				
+				float intercept = center.y - (slopePerp *center.x);			
+				List<Points>  interPList = getIntersectionCircleLine2(center, rad, slopePerp, intercept);
+				
+				for(Points p : interPList)
+				{
+					if(diningRoom.containsPoint(p.x, p.y, ROOM_TOLERANCE))
+						arcPoints.add(p);
+				}
+				
+				//JOptionPane.showMessageDialog(null, "arcPoints : " + arcPoints.size());
+			}
+			
+			return arcPoints;
+		}
 		
 		// -x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x //
 		
@@ -539,8 +694,8 @@ public class PhoenixDining extends Plugin
 					freeAS.parent = center;
 					arcSegList.add(freeAS);
 											
-					putMarkers(checkPList.get(x), 0);
-					putMarkers(checkPList.get(x+1), 1);
+					//putMarkers(checkPList.get(x), 3);
+					//putMarkers(checkPList.get(x+1), 1);
 					
 					x += 2;
 				}
@@ -553,8 +708,8 @@ public class PhoenixDining extends Plugin
 					freeAS.parent = center;
 					arcSegList.add(freeAS);
 					
-					putMarkers(checkPList.get(x), 2);
-					putMarkers(checkPList.get(x+1), 1);
+					//putMarkers(checkPList.get(x), 2);
+					//putMarkers(checkPList.get(x+1), 1);
 					
 					x += 2;
 				}
@@ -573,7 +728,7 @@ public class PhoenixDining extends Plugin
 				interPList.addAll(intList);
 			}
 			
-			JOptionPane.showMessageDialog(null, interPList.size());
+			//JOptionPane.showMessageDialog(null, interPList.size());
 			return interPList;
 		}
 		
@@ -873,74 +1028,7 @@ public class PhoenixDining extends Plugin
 
 			return matchFurn;
 		}
-		
-		/*
-		public boolean checkIntersectWithAllFurns(HomePieceOfFurniture hpf)
-		{
-			boolean bIntersects = false;
-			List<LineSegement> lsList = new ArrayList<LineSegement>();
-			
-			float[][] refFurnRect = hpf.getPoints(); 
-			Points hpfMid = new Points(hpf.getX(), hpf.getY());
-			
-			
-			for(int f = 0; f < refFurnRect.length; f++)
-			{
-				Points startLine = new Points(refFurnRect[f][0], refFurnRect[f][1]);
 				
-				Points endLine = null;
-				
-				if(f == (refFurnRect.length - 1))
-					endLine = new Points(refFurnRect[0][0], refFurnRect[0][1]);
-				else
-					endLine = new Points(refFurnRect[f+1][0], refFurnRect[f+1][1]);				
-				
-				LineSegement ls = new LineSegement(startLine, endLine);
-				lsList.add(ls);
-			}
-			
-			for(LineSegement ls: lsList)			
-			{
-				for(String furnId : furnIds)
-				{
-					if(!refFurnId.equalsIgnoreCase(furnId))
-					{
-						List<Intersect> interList = checkIntersect(ls, furnId);
-					
-						JOptionPane.showMessageDialog(null, " -> " + interList.size());
-						
-						for(Intersect inter : interList)
-						{
-							if(inter != null)
-							{
-								bIntersects = checkPointInBetween(inter.p, ls.startP, ls.endP, FURN_TOLERANCE);
-								
-								if(bIntersects)
-									break;
-							}
-							putMarkers(inter.p, 3);
-						}
-						
-						//bIntersects = checkLiesInside(lsList, hpfMid, furnId);
-						
-						if(bIntersects)
-							break;
-					}
-					
-					if(bIntersects)
-						break;
-					
-					//JOptionPane.showMessageDialog(null, furnId + " : " + bIntersects);
-				}
-				
-				if(bIntersects)
-					break;
-			}
-			
-			return bIntersects;
-		}
-		*/
-		
 		public boolean checkIntersectWithAllFurns(HomePieceOfFurniture hpf, boolean bAddAccessibility)
 		{
 			boolean bIntersects = false;
