@@ -8,3 +8,4 @@ Prep 2:
 A. Check intersection with all furnitures/fixtures/innerwalls
 B.  i.  Check initial placements of "DiningRectChairs" with accessibility (fixed DINING_RADIUS)
 	ii. Unique name for all placements of "DiningRectChairs" with accessibility
+C. Longest free arc segment (for starting arcs)- corrected  

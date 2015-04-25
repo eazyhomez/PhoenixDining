@@ -286,6 +286,9 @@ public class PhoenixDining extends Plugin
 				*/
 				
 				// B. Check initial placements -------------------------------- //
+				// C. Longest free arc segment -------------------------------- //
+				// D. Calculation of 4 move points (new)----------------------- //
+				
 				float DINING_RADIUS = 365.0f;  // 12 ft  //282.0f;  // 9.25 ft (MED RANGE : 8.5ft - 10ft)
 				
 				float DINING_MOVE_STEP = 30.5f;
