@@ -9,3 +9,6 @@ A. Check intersection with all furnitures/fixtures/innerwalls
 B.  i.  Check initial placements of "DiningRectChairs" with accessibility (fixed DINING_RADIUS)
 	ii. Unique name for all placements of "DiningRectChairs" with accessibility
 C. Longest free arc segment (for starting arcs)- corrected  
+D. Calculation of 4 move points from initial co-ordinates - New
+E. Move and incremental placement 
+F. Calculation of 4 move points for ALL increments 

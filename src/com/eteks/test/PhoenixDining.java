@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.sound.sampled.Line;
 import javax.swing.JOptionPane;
 
 import com.eteks.sweethome3d.model.CatalogPieceOfFurniture;
@@ -217,7 +216,7 @@ public class PhoenixDining extends Plugin
 				getDiningRoom();
 				
 				
-				long startTime = System.nanoTime();
+				long startTime = System.currentTimeMillis(); //System.nanoTime();
 				
 				// ===================================================== //	
 				
@@ -292,6 +291,7 @@ public class PhoenixDining extends Plugin
 				// D. Calculation of 4 move points (new)----------------------- //
 				// E. Move and incremental placement  ----------------------- //
 				// F. Calculation of 4 move points for ALL increments ----------------------- //
+				// G. Calculation of 4 move points for ALL increments with increasing radius ----------------------- //
 				
 				boolean bAddAccessibility = true;
 				float accessWidth = 61.0f;	// 2ft.
@@ -300,18 +300,20 @@ public class PhoenixDining extends Plugin
 				float DINING_MOVE_STEP = 30.5f;					
 				int DINING_MOVE_MAX = 3;
 				
-				float DINING_RADIUS_START = 259.0f;	// 8.5 ft
-				float DINING_RADIUS_END = 304.8f;
+				//float DINING_RADIUS_START = 259.0f;	// 8.5 ft
+				//float DINING_RADIUS_END = 304.8f;	// 10 ft
+				
+				float DINING_RADIUS_START = 274.3f;	// 9 ft
+				float DINING_RADIUS_END = 335.3f;	// 11 ft
 				
 				float DINING_INCREMENT = (DINING_RADIUS_END - DINING_RADIUS_START)/(6.0f*2.54f);
 
 				DiningRectStr = "diningrect";
 				DiningRectPlaceStr = "diningrectchairs";
 				
-				//for(int d = 0 ; d < DINING_INCREMENT; d++)
+				for(int d = 0 ; d < DINING_INCREMENT; d++)
 				{
-					//float DINING_RADIUS = DINING_RADIUS_START + (d*DINING_INCREMENT);
-					float DINING_RADIUS = 365.0f;  // 12 ft  //282.0f;  // 9.25 ft (MED RANGE : 8.5ft - 10ft)
+					float DINING_RADIUS = DINING_RADIUS_START + (d*DINING_INCREMENT);
 							
 					Accessibility accessBox = new Accessibility(bAddAccessibility, accessWidth, accessDepth);
 					
@@ -326,59 +328,63 @@ public class PhoenixDining extends Plugin
 					if(initP.size() > 0)
 					{
 						initPoints = initP.get(0);
-						putMarkers(initPoints, 5);					
 						
-						HomePieceOfFurniture newFurn0 = newFurn.clone();
-						newFurn0.setName(newFurn.getName() + "_0");
-						
-						HomePieceOfFurniture newFurnPlace0 = newFurnPlace.clone();
-						newFurnPlace0.setName(newFurnPlace.getName() + "_0");
-						
-						LineSegement longWS = getLongestSideOfRoom(diningRoom);										
-	
-						bSuccess = checkInitialPlacements(longWS, newFurn0, newFurnPlace0, initPoints, accessBox);
-						
-						// E. ---------------------------------- //
-						
-						float loopCount = 0;
-						float moveCount = 0;
-						
-						while(!bSuccess)
+						if(!checkPointBlockedInRoom(initPoints, diningRoom))
 						{
-							loopCount++;
-							moveCount = (loopCount * DINING_MOVE_STEP);
+							putMarkers(initPoints, 5);					
 							
-							List<Points> moveP = calcAllFourFurnCoordinates(longWS, initPoints, moveCount, tolerance);
+							HomePieceOfFurniture newFurn0 = newFurn.clone();
+							newFurn0.setName(newFurn.getName() + "_0");
 							
-							for(int m = 0; m < moveP.size(); m++)
+							HomePieceOfFurniture newFurnPlace0 = newFurnPlace.clone();
+							newFurnPlace0.setName(newFurnPlace.getName() + "_0");
+							
+							LineSegement longWS = getLongestSideOfRoom(diningRoom);										
+		
+							bSuccess = checkInitialPlacements(longWS, newFurn0, newFurnPlace0, initPoints, accessBox);
+							
+							// E. ---------------------------------- //
+							
+							float loopCount = 0;
+							float moveCount = 0;
+							
+							while(!bSuccess)
 							{
-								Points p = moveP.get(m);
+								loopCount++;
+								moveCount = (loopCount * DINING_MOVE_STEP);
 								
-								if(!checkPointBlockedInRoom(p, diningRoom))
+								List<Points> moveP = calcAllFourFurnCoordinates(longWS, initPoints, moveCount, tolerance);
+								
+								for(int m = 0; m < moveP.size(); m++)
 								{
-									putMarkers(p, 4);
+									Points p = moveP.get(m);
 									
-									HomePieceOfFurniture newFurnM = newFurn.clone();
-									newFurnM.setName(newFurn.getName() + "_" + m + "_" + loopCount);
-								
-									HomePieceOfFurniture newFurnPlaceM = newFurnPlace.clone();
-									newFurnPlaceM.setName(newFurnPlace.getName() + "_" + m);
+									if(!checkPointBlockedInRoom(p, diningRoom))
+									{
+										putMarkers(p, 4);
+										
+										HomePieceOfFurniture newFurnM = newFurn.clone();
+										newFurnM.setName(newFurn.getName() + "_" + m + "_" + loopCount);
 									
-									bSuccess = checkNextPlacements(longWS, newFurnM, newFurnPlaceM, p, accessBox);	
+										HomePieceOfFurniture newFurnPlaceM = newFurnPlace.clone();
+										newFurnPlaceM.setName(newFurnPlace.getName() + "_" + m);
+										
+										bSuccess = checkNextPlacements(longWS, newFurnM, newFurnPlaceM, p, accessBox);	
+									}
 								}
+								
+								if(loopCount >= DINING_MOVE_MAX)
+									break;
 							}
-							
-							if(loopCount >= DINING_MOVE_MAX)
-								break;
 						}
 					}
 					
 					// ================================================ //
 				}
 				
-				long endTime = System.nanoTime();
+				long endTime = System.currentTimeMillis(); //System.nanoTime();
 				
-				JOptionPane.showMessageDialog(null, "Time : " + (endTime - startTime) + " ns \n ");
+				JOptionPane.showMessageDialog(null, "Time : " + (endTime - startTime) + " ms \n ");
 			}
 			catch(Exception e)
 			{
@@ -713,7 +719,7 @@ public class PhoenixDining extends Plugin
 			float xLimit = Math.abs(ws.endP.x - ws.startP.x);
 			float yLimit = Math.abs(ws.endP.y - ws.startP.y);
 			
-			JOptionPane.showMessageDialog(null, "xLimit:" + xLimit + ", yLimit:" + yLimit + ", tolr:" + tolr);
+			//JOptionPane.showMessageDialog(null, "xLimit:" + xLimit + ", yLimit:" + yLimit + ", tolr:" + tolr);
 					 
 			if(yLimit < tolr)
 			{
@@ -723,7 +729,7 @@ public class PhoenixDining extends Plugin
 					Points p1 = new Points(centerP.x, (centerP.y + dist));
 					Points p2 = new Points(centerP.x, (centerP.y - dist));
 					
-					JOptionPane.showMessageDialog(null, "1_ p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					//JOptionPane.showMessageDialog(null, "1_ p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
 					
 					List<Points> interPList2 = new ArrayList<Points>();
 					interPList2.add(p1);
@@ -738,7 +744,7 @@ public class PhoenixDining extends Plugin
 					float slopePerp = (-1.0f / slopePara);
 					float intercept = centerP.y - (slopePerp * centerP.x);
 					
-					JOptionPane.showMessageDialog(null, "1_ slopePara : " + slopePara + ",\nslopePerp : " + slopePerp);
+					//JOptionPane.showMessageDialog(null, "1_ slopePara : " + slopePara + ",\nslopePerp : " + slopePerp);
 					
 					List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);
 					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
@@ -754,7 +760,7 @@ public class PhoenixDining extends Plugin
 					Points p1 = new Points((centerP.x + dist), centerP.y);
 					Points p2 = new Points((centerP.x - dist), centerP.y);
 					
-					JOptionPane.showMessageDialog(null, "1|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					//JOptionPane.showMessageDialog(null, "1|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
 							
 					List<Points> interPList1 = new ArrayList<Points>();
 					interPList1.add(p1);
@@ -767,6 +773,8 @@ public class PhoenixDining extends Plugin
 				{
 					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
 					float intercept = centerP.y - (slopePara * centerP.x);
+					
+					//JOptionPane.showMessageDialog(null, "1|| slopePara : " + slopePara + ",\n");
 					
 					List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);				
 					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
@@ -783,7 +791,7 @@ public class PhoenixDining extends Plugin
 					Points p1 = new Points((centerP.x + dist), centerP.y);
 					Points p2 = new Points((centerP.x - dist), centerP.y);
 					
-					JOptionPane.showMessageDialog(null, "2_ p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					//JOptionPane.showMessageDialog(null, "2_ p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
 							
 					List<Points> interPList1 = new ArrayList<Points>();
 					interPList1.add(p1);
@@ -798,7 +806,7 @@ public class PhoenixDining extends Plugin
 					float slopePerp = (-1.0f / slopePara);
 					float intercept = centerP.y - (slopePerp * centerP.x);
 					
-					JOptionPane.showMessageDialog(null, "2_ slopePara : " + slopePara + ",\nslopePerp : " + slopePerp);
+					//JOptionPane.showMessageDialog(null, "2_ slopePara : " + slopePara + ",\nslopePerp : " + slopePerp);
 					
 					List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePerp, intercept);				
 					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
@@ -813,7 +821,7 @@ public class PhoenixDining extends Plugin
 					Points p1 = new Points(centerP.x, (centerP.y + dist));
 					Points p2 = new Points(centerP.x, (centerP.y - dist));
 					
-					JOptionPane.showMessageDialog(null, "2|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					//JOptionPane.showMessageDialog(null, "2|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
 					
 					List<Points> interPList2 = new ArrayList<Points>();
 					interPList2.add(p1);
@@ -827,7 +835,7 @@ public class PhoenixDining extends Plugin
 					Points p1 = new Points(centerP.x, (centerP.y + dist));
 					Points p2 = new Points(centerP.x, (centerP.y - dist));
 					
-					JOptionPane.showMessageDialog(null, "2|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
+					//JOptionPane.showMessageDialog(null, "2|| p1 : " + p1.x + ", " + p1.y + ",\np2 : " + p2.x + ", " + p2.y);
 					
 					List<Points> interPList2 = new ArrayList<Points>();
 					interPList2.add(p1);
@@ -841,7 +849,7 @@ public class PhoenixDining extends Plugin
 					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
 					float intercept = centerP.y - (slopePara * centerP.x);
 					
-					JOptionPane.showMessageDialog(null, "2|| slopePara : " + slopePara + ",\n");
+					//JOptionPane.showMessageDialog(null, "2|| slopePara : " + slopePara + ",\n");
 					
 					List<Points> interPList2 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);
 					List<Points> sortedPList2 = sortPList(interPList2, wsMidP);
@@ -902,6 +910,8 @@ public class PhoenixDining extends Plugin
 				{
 					float slopePara = ((ws.endP.y - ws.startP.y) / (ws.endP.x - ws.startP.x));
 					float intercept = centerP.y - (slopePara * centerP.x);
+					
+					//JOptionPane.showMessageDialog(null, "3|| slopePara : " + slopePara + ",\n");
 					
 					List<Points> interPList1 = getIntersectionCircleLine2(centerP, dist, slopePara, intercept);				
 					List<Points> sortedPList1 = sortPList(interPList1, wsMidP);
