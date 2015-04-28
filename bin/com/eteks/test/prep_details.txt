@@ -12,3 +12,4 @@ C. Longest free arc segment (for starting arcs)- corrected
 D. Calculation of 4 move points from initial co-ordinates - New
 E. Move and incremental placement 
 F. Calculation of 4 move points for ALL increments 
+G. Calculation of 4 move points for ALL increments with increasing radius

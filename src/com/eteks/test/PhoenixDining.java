@@ -60,6 +60,51 @@ public class PhoenixDining extends Plugin
 		
 		public List<Design> validDesignList = new ArrayList<Design>();
 		
+		// ======================= ROOM CONSTANTS (in sq ft) ======================= //
+		
+		public float ROOM_AREA_S_MIN = 0.0f;		
+		public float ROOM_AREA_S_MAX = 350.0f;
+		
+		public float ROOM_AREA_M_MIN = 350.0f;
+		public float ROOM_AREA_M_MAX = 500.0f;
+		
+		public float ROOM_AREA_L_MIN = 500.0f;
+		public float ROOM_AREA_L_MAX = 1500.0f;
+		
+		public float ROOM_CONV_SQCM_SQFT = 0.00107639104f;
+		public float CONV_INCH_CM = 2.54f;
+		public float CONV_FT_INCH = 12.0f;
+				
+		// ======================= DINING SEATER CONSTANTS (in ft) ======================= //
+		
+		public float FOUR_SEATER_INDEX = 0.0f;
+		public float FOUR_SEATER_RADIUS_MIN = 7.5f;
+		public float FOUR_SEATER_RADIUS_MAX = 8.0f;
+		public String FOUR_SEATER_BASIC_RECT = "diningrect4";
+		public String FOUR_SEATER_PLACE_RECT = "diningrectchairs4";
+		
+		public float SIX_SEATER_INDEX = 1.0f;
+		public float SIX_SEATER_RADIUS_MIN = 8.5f;
+		public float SIX_SEATER_RADIUS_MAX = 10.0f;
+		public String SIX_SEATER_BASIC_RECT = "diningrect6";
+		public String SIX_SEATER_PLACE_RECT = "diningrectchairs6";
+		
+		public float EIGHT_SEATER_INDEX = 2.0f;
+		public float EIGHT_SEATER_RADIUS_MIN = 10.0f;
+		public float EIGHT_SEATER_RADIUS_MAX = 12.0f;
+		public String EIGHT_SEATER_BASIC_RECT = "diningrect8";
+		public String EIGHT_SEATER_PLACE_RECT = "diningrectchairs8";
+		
+		// ======================= CONSTANTS TABLE ======================= //
+		
+		float[][][] roomDimsArr = {{{ROOM_AREA_S_MIN, ROOM_AREA_S_MAX},{FOUR_SEATER_INDEX, SIX_SEATER_INDEX}}, {{ROOM_AREA_M_MIN, ROOM_AREA_M_MAX},{FOUR_SEATER_INDEX, SIX_SEATER_INDEX}}, {{ROOM_AREA_L_MIN, ROOM_AREA_L_MAX},{SIX_SEATER_INDEX, EIGHT_SEATER_INDEX}}};
+			
+		float[][] roomRadiiArr = {{FOUR_SEATER_RADIUS_MIN, FOUR_SEATER_RADIUS_MAX}, {SIX_SEATER_RADIUS_MIN, SIX_SEATER_RADIUS_MAX}, {EIGHT_SEATER_RADIUS_MIN, EIGHT_SEATER_RADIUS_MAX}};
+		String[][] roomRectArr = {{FOUR_SEATER_BASIC_RECT, FOUR_SEATER_PLACE_RECT}, {SIX_SEATER_BASIC_RECT, SIX_SEATER_PLACE_RECT}, {EIGHT_SEATER_BASIC_RECT, EIGHT_SEATER_PLACE_RECT}};
+		
+		public float DINING_RADIUS_START = 0.0f;
+		public float DINING_RADIUS_END = 0.0f;	
+		
 		public String DiningRectStr = "";
 		public String DiningRectPlaceStr = "";
 		
@@ -189,6 +234,22 @@ public class PhoenixDining extends Plugin
 			}
 		}
 		
+		public class DesignConfig
+		{
+			float rMin;
+			float rMax;
+			
+			String rectBase;
+			String rectPlace;
+
+			public DesignConfig(float radMin , float radMax, String rBase, String rPlace)
+			{
+				rMin = radMin;
+				rMax= radMax;				
+				rectBase = rBase;
+				rectPlace = rPlace;
+			}
+		}
 		
 		// ======================= CODE ======================= //
 		
@@ -214,84 +275,13 @@ public class PhoenixDining extends Plugin
 				storeAllWallRects(home);
 				
 				getDiningRoom();
-				
+				initDiningConstants();
 				
 				long startTime = System.currentTimeMillis(); //System.nanoTime();
 				
 				// ===================================================== //	
 				
-				// 1. -------------------------------- //
-				/*
-				float accessWidth = 61.0f;	// 2ft.
-				float accessDepth = 61.0f;	// 2ft.
-				
-				for(HomePieceOfFurniture hp : home.getFurniture())
-				{
-					if(hp.getName().equalsIgnoreCase("diningrect"))
-					{
-						putMarkerOnPolygon(hp.getPoints(), 2);
-						
-						float[][] fRect = genAccessBox(hp, accessWidth, accessDepth);
-						putMarkerOnPolygon(fRect, 1);
-					}
-				}
-				*/
-				// 3. -------------------------------- //
-				/*
-				Points centerP = getStartingPoint();
-				putMarkers(centerP, 0);
-				
-				float radius = 300.0f; // 282.0f; //9.25 ft
-				getDiningRoom();
-				
-				float[][] polyRect = diningRoom.getPoints();
-				putMarkerOnPolygon(polyRect, 4);
-				
-				getIntersectionCirclePoly(centerP, radius, polyRect, tolerance);
-				
-				*/
-				// 4. -------------------------------- //
-				/*
-				Points centerP = getStartingPoint();
-				putMarkers(centerP, 0);
-				
-				float radius = 300.0f; 
-				
-				calcStartArcPoints(centerP, radius, tolerance);
-				
-				Points pArc1 = new Points(128.0f, 1127.0f);
-				Points pArc2 = new Points(499.0f, 983.0f);
-				putMarkers(pArc1, 3);
-				putMarkers(pArc2, 4);
-				
-				generateFreeArcSegs(centerP, pArc1, pArc2, radius, tolerance);
-				*/
-				
-				// A. Intersection with All furns -------------------------------- //
-				/*
-				HomePieceOfFurniture hpf = getFurnItem("diningrectchairs");
-
-				boolean bAddAccessibility = true;
-				float accessWidth = 61.0f;	// 2ft.
-				float accessDepth = 61.0f;	// 2ft.
-						
-				Accessibility accessBox = new Accessibility(bAddAccessibility, accessWidth, accessDepth);
-				HomePieceOfFurniture hpfNew = hpf.clone();				
-				Points furnCoords = new Points(250.0f, 700.0f);
-				
-				LineSegement ws = getLongestSideOfRoom(diningRoom);
-				placeFurnParallelToWall(ws, hpfNew, furnCoords);
-				//placeFurnPerpendicularToWall(ws, hpfNew, furnCoords);
-				
-				checkPlacement(hpfNew, accessBox);
-				*/
-				
-				// B. Check initial placements -------------------------------- //
-				// C. Longest free arc segment -------------------------------- //
-				// D. Calculation of 4 move points (new)----------------------- //
-				// E. Move and incremental placement  ----------------------- //
-				// F. Calculation of 4 move points for ALL increments ----------------------- //
-				// G. Calculation of 4 move points for ALL increments with increasing radius ----------------------- //
+				// H. Calculation of Dining Room size, type of DiningRect and radius accordingly ----------------------- //
 				
 				boolean bAddAccessibility = true;
 				float accessWidth = 61.0f;	// 2ft.
@@ -300,91 +290,101 @@ public class PhoenixDining extends Plugin
 				float DINING_MOVE_STEP = 30.5f;					
 				int DINING_MOVE_MAX = 3;
 				
-				//float DINING_RADIUS_START = 259.0f;	// 8.5 ft
-				//float DINING_RADIUS_END = 304.8f;	// 10 ft
+				float DINING_INCREMENT_STEP = 0.5f;	// 0.5 ft --> 6 inches
 				
-				float DINING_RADIUS_START = 274.3f;	// 9 ft
-				float DINING_RADIUS_END = 335.3f;	// 11 ft
 				
-				float DINING_INCREMENT = (DINING_RADIUS_END - DINING_RADIUS_START)/(6.0f*2.54f);
-
-				DiningRectStr = "diningrect";
-				DiningRectPlaceStr = "diningrectchairs";
+				List<DesignConfig> desConfList = getDiningConfigs();
 				
-				for(int d = 0 ; d < DINING_INCREMENT; d++)
+				for(int dc = 0 ; dc < desConfList.size(); dc++)
 				{
-					float DINING_RADIUS = DINING_RADIUS_START + (d*DINING_INCREMENT);
-							
-					Accessibility accessBox = new Accessibility(bAddAccessibility, accessWidth, accessDepth);
+					loadDesignConfig(desConfList.get(dc));					
 					
-					HomePieceOfFurniture newFurn = getFurnItem(DiningRectStr);
-					HomePieceOfFurniture newFurnPlace = getFurnItem(DiningRectPlaceStr);
-					
-					Points centerP = getStartingPoint();
-					List<Points> initP = calcInitialPoints(centerP, DINING_RADIUS, tolerance);
-					
-					boolean bSuccess = false;
-							
-					if(initP.size() > 0)
+					float DINING_INCREMENT = ((DINING_RADIUS_END - DINING_RADIUS_START)/(DINING_INCREMENT_STEP));
+
+					for(int d = 0 ; d < DINING_INCREMENT; d++)
 					{
-						initPoints = initP.get(0);
+						float DINING_RADIUS = (DINING_RADIUS_START + (d*DINING_INCREMENT_STEP)) * (CONV_FT_INCH * CONV_INCH_CM);
+								
+						//JOptionPane.showMessageDialog(null, dc + "[" + d + "] DINING_INCREMENT : " + DINING_INCREMENT + ", DINING_RADIUS : " + DINING_RADIUS + ", DiningRectStr : " + DiningRectStr);
 						
-						if(!checkPointBlockedInRoom(initPoints, diningRoom))
+						Accessibility accessBox = new Accessibility(bAddAccessibility, accessWidth, accessDepth);
+						
+						HomePieceOfFurniture newFurn = getFurnItem(DiningRectStr);
+						HomePieceOfFurniture newFurnPlace = getFurnItem(DiningRectPlaceStr);
+						
+						Points centerP = getStartingPoint();
+						List<Points> initP = calcInitialPoints(centerP, DINING_RADIUS, tolerance);
+						
+						//JOptionPane.showMessageDialog(null, initP.size() + " -> " + DINING_RADIUS);
+						
+						boolean bSuccess = false;
+								
+						if(initP.size() > 0)
 						{
-							putMarkers(initPoints, 5);					
+							initPoints = initP.get(0);
 							
-							HomePieceOfFurniture newFurn0 = newFurn.clone();
-							newFurn0.setName(newFurn.getName() + "_0");
-							
-							HomePieceOfFurniture newFurnPlace0 = newFurnPlace.clone();
-							newFurnPlace0.setName(newFurnPlace.getName() + "_0");
-							
-							LineSegement longWS = getLongestSideOfRoom(diningRoom);										
-		
-							bSuccess = checkInitialPlacements(longWS, newFurn0, newFurnPlace0, initPoints, accessBox);
-							
-							// E. ---------------------------------- //
-							
-							float loopCount = 0;
-							float moveCount = 0;
-							
-							while(!bSuccess)
+							if(!checkPointBlockedInRoom(initPoints, diningRoom))
 							{
-								loopCount++;
-								moveCount = (loopCount * DINING_MOVE_STEP);
+								putMarkers(initPoints, 5);					
 								
-								List<Points> moveP = calcAllFourFurnCoordinates(longWS, initPoints, moveCount, tolerance);
+								HomePieceOfFurniture newFurn0 = newFurn.clone();
+								newFurn0.setName(newFurn.getName() + "_0");
 								
-								for(int m = 0; m < moveP.size(); m++)
+								HomePieceOfFurniture newFurnPlace0 = newFurnPlace.clone();
+								newFurnPlace0.setName(newFurnPlace.getName() + "_0");
+								
+								LineSegement longWS = getLongestSideOfRoom(diningRoom);										
+			
+								bSuccess = checkInitialPlacements(longWS, newFurn0, newFurnPlace0, initPoints, accessBox);
+								
+								// E. ---------------------------------- //
+								
+								float loopCount = 0;
+								float moveCount = 0;
+								
+								while(!bSuccess)
 								{
-									Points p = moveP.get(m);
+									loopCount++;
+									moveCount = (loopCount * DINING_MOVE_STEP);
+											
+									List<Points> moveP = calcAllFourFurnCoordinates(longWS, initPoints, moveCount, tolerance);
 									
-									if(!checkPointBlockedInRoom(p, diningRoom))
-									{
-										putMarkers(p, 4);
+									for(int m = 0; m < moveP.size(); m++)
+									{										
+										//JOptionPane.showMessageDialog(null, dc + " -> , d : " + d + " -> , lc : " + loopCount + " / m : " + m );
+										//JOptionPane.showMessageDialog(null, furnIds.size() + ", " + furnRects.size() + "; " + furnRectsAccess.size());  
 										
-										HomePieceOfFurniture newFurnM = newFurn.clone();
-										newFurnM.setName(newFurn.getName() + "_" + m + "_" + loopCount);
-									
-										HomePieceOfFurniture newFurnPlaceM = newFurnPlace.clone();
-										newFurnPlaceM.setName(newFurnPlace.getName() + "_" + m);
+										Points p = moveP.get(m);
 										
-										bSuccess = checkNextPlacements(longWS, newFurnM, newFurnPlaceM, p, accessBox);	
+										if(!checkPointBlockedInRoom(p, diningRoom))
+										{
+											putMarkers(p, (dc + 2));
+											
+											HomePieceOfFurniture newFurnM = newFurn.clone();
+											newFurnM.setName(newFurn.getName() + "_" + m + "_" + loopCount);
+										
+											HomePieceOfFurniture newFurnPlaceM = newFurnPlace.clone();
+											newFurnPlaceM.setName(newFurnPlace.getName() + "_" + m);
+											
+											bSuccess = checkNextPlacements(longWS, newFurnM, newFurnPlaceM, p, accessBox);	
+										}
 									}
+									
+									if(loopCount >= DINING_MOVE_MAX)
+										break;
 								}
-								
-								if(loopCount >= DINING_MOVE_MAX)
-									break;
 							}
 						}
+						
+						// ================================================ //
 					}
 					
-					// ================================================ //
+					//clearPrevDesign();
 				}
 				
 				long endTime = System.currentTimeMillis(); //System.nanoTime();
 				
-				JOptionPane.showMessageDialog(null, "Time : " + (endTime - startTime) + " ms \n ");
+				JOptionPane.showMessageDialog(null, "Time : " + (endTime - startTime) + " ms \n\nNo. of Designs generated : " + validDesignList.size());
 			}
 			catch(Exception e)
 			{
@@ -392,6 +392,87 @@ public class PhoenixDining extends Plugin
 				//e.printStackTrace();
 			}
 		}		
+		
+		public void clearPrevDesign()
+		{
+			List<HomePieceOfFurniture> hpfList = home.getFurniture(); 
+			
+			for(HomePieceOfFurniture hpf: hpfList)
+			{
+				String fName = hpf.getName().toLowerCase();
+				
+				//if(markBoxName.contains(fName) || fName.startsWith("diningrect"))
+				if(markBoxName.contains(fName))
+				{
+					home.deletePieceOfFurniture(hpf);
+				}
+			}
+			
+			//storeAllFurnRects(home);
+			//storeAllWallRects(home);
+		}
+		
+		public List<DesignConfig> getDiningConfigs()
+		{
+			List<DesignConfig> desList = new ArrayList<DesignConfig>();
+			
+			float roomSize = room.getArea() * ROOM_CONV_SQCM_SQFT;
+			
+			//String dbgStr = "roomSize : " + roomSize + "\n\n";
+			
+			for(int x = 0 ; x < roomDimsArr.length; x++)
+			{
+				if((roomDimsArr[x][0][0] <= roomSize) && (roomSize <= roomDimsArr[x][0][1]))
+				{
+					//JOptionPane.showMessageDialog(null, roomDimsArr[x][1].length);
+							
+					for(int y = 0 ; y < roomDimsArr[x][1].length; y++)
+					{
+						int indx = new Float(roomDimsArr[x][1][y]).intValue();
+						
+						//JOptionPane.showMessageDialog(null, "indx : " + indx);
+						
+						float radMin = roomRadiiArr[indx][0]; 
+						float radMax = roomRadiiArr[indx][1];
+						
+						String rBase = roomRectArr[indx][0];
+						String rPlace = roomRectArr[indx][1];
+						
+						DesignConfig desConf = new DesignConfig(radMin, radMax, rBase, rPlace);
+						desList.add(desConf);
+						
+						//dbgStr += "DINING_RADIUS_START : " + radMin + "\n";
+						//dbgStr += "DINING_RADIUS_END : " + radMax + "\n";
+						//dbgStr += "DiningRectStr : " + rBase + "\n";
+						//dbgStr += "DiningRectPlaceStr : " + rPlace + "\n";
+						//dbgStr += "\n-----------------\n";
+					}
+				}
+			}
+						
+			//JOptionPane.showMessageDialog(null, dbgStr);
+			
+			return desList;
+		}
+		
+		public void loadDesignConfig(DesignConfig desConf)
+		{
+			DINING_RADIUS_START = desConf.rMin;
+			DINING_RADIUS_END = desConf.rMax;
+			
+			DiningRectStr = desConf.rectBase;
+			DiningRectPlaceStr = desConf.rectPlace;
+			
+			//String dbgStr = validDesignList.size() + "\n\n";
+			
+			//dbgStr += "DINING_RADIUS_START : " + DINING_RADIUS_START + "\n";
+			//dbgStr += "DINING_RADIUS_END : " + DINING_RADIUS_END + "\n";
+			//dbgStr += "DiningRectStr : " + DiningRectStr + "\n";
+			//dbgStr += "DiningRectPlaceStr : " + DiningRectPlaceStr + "\n";
+			//dbgStr += "\n-----------------\n";
+			
+			//JOptionPane.showMessageDialog(null, dbgStr);
+		}
 		
 		public List<Points> getIntersectionCirclePoly(Points center, float rad, float[][] polyRect, float tolr)
 		{
@@ -1131,10 +1212,13 @@ public class PhoenixDining extends Plugin
 		{		
 			List<Points> interPList = new ArrayList<Points>();	
 			
-			for(float[][] fRects : furnRects)
+			for(int f = 0; f < furnIds.size(); f++)
 			{
-				List<Points> intList = getIntersectionArcPoly(center, rad, fRects, pArc1, pArc2, tolerance);
-				interPList.addAll(intList);
+				if(!furnIds.get(f).toLowerCase().startsWith("diningrect"))
+				{
+					List<Points> intList = getIntersectionArcPoly(center, rad, furnRects.get(f), pArc1, pArc2, tolerance);
+					interPList.addAll(intList);
+				}				
 			}
 			
 			//JOptionPane.showMessageDialog(null, interPList.size());
@@ -1149,7 +1233,7 @@ public class PhoenixDining extends Plugin
 			{
 				String fName = hpf.getName();
 				
-				if(!markBoxName.contains(fName))
+				if(!markBoxName.contains(fName) && !(fName.toLowerCase().startsWith("diningrect")))
 				{
 					boolean bCheck1 = hpf.containsPoint(test.x, test.y, FURN_TOLERANCE);
 					
@@ -1196,7 +1280,7 @@ public class PhoenixDining extends Plugin
 			{
 				String fName = hpf.getName();
 				
-				if(!markBoxName.contains(fName) && !(fName.toLowerCase().startsWith(DiningRectPlaceStr)))
+				if(!markBoxName.contains(fName) && !(fName.toLowerCase().startsWith("diningrect")))
 				{
 					boolean bCheck1 = hpf.containsPoint(test.x, test.y, FURN_TOLERANCE);
 					
@@ -1264,11 +1348,12 @@ public class PhoenixDining extends Plugin
 		}
 		
 		public void storeAllFurnRects(Home h)
-		{			
+		{	
+			//JOptionPane.showMessageDialog(null, "storeAllFurnRects");
+			
 			for(HomePieceOfFurniture hp: h.getFurniture())
 			{
 				String fName = hp.getName();
-				//JOptionPane.showMessageDialog(null, fName);
 				
 				furnIds.add(fName);
 				furnRects.add(hp.getPoints());
@@ -1456,6 +1541,14 @@ public class PhoenixDining extends Plugin
 			return finalList;
 		}
 		
+		public void initDiningConstants()
+		{
+			DINING_RADIUS_START = 0.0f;
+			DINING_RADIUS_END = 0.0f;;
+			
+			DiningRectStr = "";
+			DiningRectPlaceStr = "";
+		}
 		// ======================= UTILITY FUNCTIONS ======================= //
 		
 		public HomePieceOfFurniture getFurnItem(String furnName)
@@ -1491,7 +1584,7 @@ public class PhoenixDining extends Plugin
 			
 			for(int x = 0 ; x < furnIds.size(); x++)
 			{
-				if(!hpf.getName().equalsIgnoreCase(furnIds.get(x)))
+				if(!hpf.getName().equalsIgnoreCase(furnIds.get(x)) && !(furnIds.get(x).toLowerCase().startsWith("diningrect")))
 				{	
 					float[][] refFurnRect = furnRects.get(x);
 					
