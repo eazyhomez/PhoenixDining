@@ -418,7 +418,7 @@ public class PhoenixDining extends Plugin
 			
 			float roomSize = room.getArea() * ROOM_CONV_SQCM_SQFT;
 			
-			String dbgStr = "roomSize : " + roomSize + " sq. ft. \n-------- Configs ---------\n";
+			//String dbgStr = "roomSize : " + roomSize + "\n\n";
 			
 			for(int x = 0 ; x < roomDimsArr.length; x++)
 			{
@@ -441,16 +441,16 @@ public class PhoenixDining extends Plugin
 						DesignConfig desConf = new DesignConfig(radMin, radMax, rBase, rPlace);
 						desList.add(desConf);
 						
-						dbgStr += "DINING_RADIUS_START : " + radMin + "\n";
-						dbgStr += "DINING_RADIUS_END : " + radMax + "\n";
-						dbgStr += "DiningRectStr : " + rBase + "\n";
-						dbgStr += "DiningRectPlaceStr : " + rPlace + "\n";
-						dbgStr += "-----------------\n";
+						//dbgStr += "DINING_RADIUS_START : " + radMin + "\n";
+						//dbgStr += "DINING_RADIUS_END : " + radMax + "\n";
+						//dbgStr += "DiningRectStr : " + rBase + "\n";
+						//dbgStr += "DiningRectPlaceStr : " + rPlace + "\n";
+						//dbgStr += "\n-----------------\n";
 					}
 				}
 			}
 						
-			JOptionPane.showMessageDialog(null, dbgStr);
+			//JOptionPane.showMessageDialog(null, dbgStr);
 			
 			return desList;
 		}
