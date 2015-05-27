@@ -1,5 +1,5 @@
 Prep 2:
-
+------
 1. Create Accessibility Box
 2. Intersection of Arc and Line (previous)
 3. Intersection of Circle and Polygon (using intersection of Circle and Line Segment)
@@ -13,3 +13,11 @@ D. Calculation of 4 move points from initial co-ordinates - New
 E. Move and incremental placement 
 F. Calculation of 4 move points for ALL increments 
 G. Calculation of 4 move points for ALL increments with increasing radius
+
+Final
+------
+H. Phoenix Dining - With different shape, radius based on room size
+
+Demo
+-----
+I. Demo

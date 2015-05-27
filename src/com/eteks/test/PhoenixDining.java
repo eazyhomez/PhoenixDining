@@ -84,8 +84,8 @@ public class PhoenixDining extends Plugin
 		public String FOUR_SEATER_PLACE_RECT = "diningrectchairs4";
 		
 		public float SIX_SEATER_INDEX = 1.0f;
-		public float SIX_SEATER_RADIUS_MIN = 8.5f;
-		public float SIX_SEATER_RADIUS_MAX = 10.0f;
+		public float SIX_SEATER_RADIUS_MIN = 7.5f;//8.5f;
+		public float SIX_SEATER_RADIUS_MAX = 12.0f;//10.0f;
 		public String SIX_SEATER_BASIC_RECT = "diningrect6";
 		public String SIX_SEATER_PLACE_RECT = "diningrectchairs6";
 		
@@ -288,7 +288,7 @@ public class PhoenixDining extends Plugin
 				float accessDepth = 61.0f;	// 2ft.
 				
 				float DINING_MOVE_STEP = 30.5f;					
-				int DINING_MOVE_MAX = 3;
+				int DINING_MOVE_MAX = 4;
 				
 				float DINING_INCREMENT_STEP = 0.5f;	// 0.5 ft --> 6 inches
 				
@@ -1403,11 +1403,28 @@ public class PhoenixDining extends Plugin
 		{
 			Points startPoints = new Points();
 			
+			boolean bFound = false;
+			
 			for(HomePieceOfFurniture hpf : home.getFurniture())
 			{
 				if(hpf.getName().equalsIgnoreCase("Kitchen Door"))
 				{
 					startPoints = new Points(hpf.getX(), hpf.getY());
+					bFound = true;
+					break;
+				}
+			}
+			
+			if(!bFound)
+			{
+				for(HomePieceOfFurniture hpf : home.getFurniture())
+				{
+					if(hpf.getName().equalsIgnoreCase("Kitchen Wall Opening"))
+					{
+						startPoints = new Points(hpf.getX(), hpf.getY());
+						bFound = true;
+						break;
+					}
 				}
 			}
 			
@@ -1549,6 +1566,7 @@ public class PhoenixDining extends Plugin
 			DiningRectStr = "";
 			DiningRectPlaceStr = "";
 		}
+		
 		// ======================= UTILITY FUNCTIONS ======================= //
 		
 		public HomePieceOfFurniture getFurnItem(String furnName)
